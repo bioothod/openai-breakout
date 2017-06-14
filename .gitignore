@@ -1,0 +1,6 @@
+output/
+tags
+pg-karpathy.py
+grad.py
+.*.sw*
+*.pyc
