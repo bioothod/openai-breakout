@@ -1,5 +1,4 @@
 import tensorflow as tf
-from tensorflow.contrib.layers import apply_regularization, l1_l2_regularizer
 
 import numpy as np
 
@@ -13,99 +12,79 @@ def get_scope_name(s):
     return s.split('/')[0].split(':')[0]
 
 class nn(object):
-    def __init__(self, scope, input_size, output_size, summary_writer):
+    def __init__(self, scope, input_shape, output_size, summary_writer, train_mode):
         print "going to initialize scope %s" % scope
         self.summary_writer = summary_writer
         self.scope = scope
         with tf.variable_scope(scope) as vscope:
             self.vscope = vscope
-            self.do_init(input_size, output_size)
+            self.do_init(input_shape, output_size, train_mode)
             print "scope %s has been initialized" % scope
 
-    def init_neurons(self, input_layer, wname, wnum, bias_name=None):
-        ishape = input_layer.get_shape()[1].value
-        dims = [ishape, wnum]
-
-        w = tf.get_variable(wname,
-                initializer=tf.random_normal(dims),
-                regularizer=l1_l2_regularizer(scale_l1=self.reg_beta, scale_l2=self.reg_beta),
-                dtype=tf.float32)
-        sw = tf.summary.histogram(wname, w)
-        self.summary_weights.append(sw)
-
-        self.transform_params[wname] = w
-        wext = tf.placeholder(tf.float32, dims, name=wname+'_ext')
-        w_transform_ops = w.assign(w * (1 - self.transform_lr) + wext * self.transform_lr)
-        self.transform_ops.append(w_transform_ops)
-
-        h = tf.matmul(input_layer, w)
-
-        if bias_name:
-            b = tf.get_variable(bias_name, initializer=tf.random_normal([wnum]), dtype=tf.float32)
-            sb = tf.summary.histogram(bias_name, b)
-            self.summary_weights.append(sb)
-
-            self.transform_params[bias_name] = b
-
-            bext = tf.placeholder(tf.float32, [wnum], name=bias_name+'_ext')
-
-            b_transform_ops = b.assign(b * (1 - self.transform_lr) + bext * self.transform_lr)
-            self.transform_ops.append(b_transform_ops)
-
-            h = tf.add(h, b)
-
-        return h
-
-    def init_layer(self, input_layer, wname, wnum, nonlinear, bias_name=None):
-        h = self.init_neurons(input_layer, wname, wnum, bias_name)
-        if nonlinear:
-            return nonlinear(h)
-        return h
-
-    def init_model(self, input_size, output_size):
-        layers = [('w0', 2048), ('w1', 1024), ('w2', 512), ('w3', 128)]
-
+    def init_model(self, input_shape, output_size, train_mode):
         print "init_model scope: %s" % (tf.get_variable_scope().name)
 
-        x = tf.placeholder(tf.float32, [None, input_size], name='x')
+        x = tf.placeholder(tf.float32, [None, input_shape[0], input_shape[1], input_shape[2]], name='x')
         action = tf.placeholder(tf.int32, [None, 1], name='action')
         reward = tf.placeholder(tf.float32, [None, 1], name='reward')
 
         self.add_summary(tf.summary.histogram('action', action))
         self.add_summary(tf.summary.histogram('reward', reward))
 
-        input_dimension = input_size
-        input_layer = x
-        idx = 0
-        for wname, wnum in layers:
-            input_layer = self.init_layer(input_layer, wname, wnum, tf.nn.tanh, 'b%d'%(idx))
-            self.add_summary(tf.summary.histogram('h%d' % idx, input_layer))
-            idx += 1
+        input_layer = tf.reshape(x, [-1, input_shape[0], input_shape[1], input_shape[2]])
 
-        self.policy = self.init_layer(input_layer, 'policy', output_size, tf.nn.softmax)
-        self.value = self.init_layer(input_layer, 'value', 1, None)
+        c1 = tf.layers.conv2d(inputs=input_layer, filters=32, kernel_size=[5,5], padding='same', activation=tf.nn.relu)
+        p1 = tf.layers.max_pooling2d(inputs=c1, pool_size=2, strides=2, padding='same')
+        
+        c2 = tf.layers.conv2d(inputs=p1, filters=32, kernel_size=5, padding='same', activation=tf.nn.relu)
+        p2 = tf.layers.max_pooling2d(inputs=c2, pool_size=2, strides=2, padding='same')
+        
+        c3 = tf.layers.conv2d(inputs=p2, filters=64, kernel_size=4, padding='same', activation=tf.nn.relu)
+        p3 = tf.layers.max_pooling2d(inputs=c3, pool_size=2, strides=2, padding='same')
+        
+        c4 = tf.layers.conv2d(inputs=p3, filters=64, kernel_size=3, padding='same', activation=tf.nn.relu)
+        p4 = tf.layers.max_pooling2d(inputs=c4, pool_size=2, strides=2, padding='same')
 
-        log_policy = tf.log(1e-6 + self.policy)
+        flat = tf.reshape(p4, [-1, np.prod(p4.get_shape().as_list()[1:])])
+        dense = tf.layers.dense(inputs=flat, units=512, activation=tf.nn.relu)
+
+        policy = tf.layers.dense(inputs=dense, units=output_size)
+        self.policy = tf.nn.softmax(policy)
+        self.value = tf.layers.dense(inputs=dense, units=1)
+
         actions = tf.one_hot(action, output_size)
         actions = tf.squeeze(actions, 1)
 
-        reg_loss = tf.add_n(tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES))
-        self.add_summary(tf.summary.scalar("reg_loss", reg_loss))
+        log_softmax = tf.nn.log_softmax(policy)
+        self.add_summary(tf.summary.scalar("log_softmax", tf.reduce_mean(log_softmax)))
+        log_probability_per_action = tf.reduce_sum(log_softmax * actions, axis=-1, keep_dims=True)
+        advantage = (reward - tf.stop_gradient(self.value))
 
-        log_probability_per_action = tf.reduce_sum(tf.multiply(log_policy, actions), axis=1)
-        advantage = (reward - self.value)
 
+        xentropy_loss = tf.reshape(tf.nn.softmax_cross_entropy_with_logits(labels=actions, logits=policy), [-1, 1])
+        tf.losses.add_loss(xentropy_loss)
+        self.add_summary(tf.summary.scalar("xentropy_loss", tf.reduce_mean(xentropy_loss)))
+        print "xetrnopy", xentropy_loss
+
+        self.add_summary(tf.summary.scalar("log_probability", tf.reduce_sum(log_probability_per_action)))
         self.add_summary(tf.summary.scalar("advantage_mean", tf.reduce_mean(advantage)))
-        self.add_summary(tf.summary.scalar("advantage_rms", tf.sqrt(tf.reduce_mean(tf.square(advantage)))))
 
-        self.cost_policy = -advantage * log_probability_per_action + reg_loss
+        self.cost_policy = -advantage * log_probability_per_action
+        tf.losses.add_loss(self.cost_policy)
         self.add_summary(tf.summary.scalar("cost_policy_mean", tf.reduce_mean(self.cost_policy)))
-        self.add_summary(tf.summary.scalar("cost_policy_rms", tf.sqrt(tf.reduce_mean(tf.square(self.cost_policy)))))
+        print "cost_policy", self.cost_policy
 
-        self.cost_value = tf.square(self.value - reward) + reg_loss
+        self.cost_value = tf.square(self.value - reward)
+        tf.losses.add_loss(self.cost_value)
         self.add_summary(tf.summary.scalar("cost_value_mean", tf.reduce_mean(self.cost_value)))
+        print "cost_value", self.cost_value
+
         self.add_summary(tf.summary.scalar("input_reward_mean", tf.reduce_mean(reward)))
         self.add_summary(tf.summary.scalar("value_mean", tf.reduce_mean(self.value)))
+
+        self.add_summary(tf.summary.scalar("policy_mean", tf.reduce_mean(policy)))
+
+        self.add_summary(tf.summary.scalar("loss", tf.reduce_sum(tf.losses.get_total_loss())))
 
     def add_summary(self, s):
         self.summary_all.append(s)
@@ -126,26 +105,24 @@ class nn(object):
             if self.scope != get_scope_name(var.name):
                 continue
 
-            pname = get_param_name(var.name)
-            gname = '%s/gradient_%s' % (prefix, pname)
+            gname = grad.name.replace('/', 'X').split(':')[0]
             print "gradient %s -> %s" % (var, gname)
-
 
             # get all gradients
             ret_grads.append(grad)
             ret_names.append(gname)
 
             pl = tf.placeholder(tf.float32, shape=var.get_shape(), name=gname)
-            clip = tf.clip_by_average_norm(pl, 1)
-            ret_apply.append((clip, var))
+            #clip = tf.clip_by_average_norm(pl, 0.01)
+            ret_apply.append((pl, var))
 
-            ag = tf.summary.histogram('%s/%s/apply_%s'% (self.scope, prefix, gname), clip)
+            ag = tf.summary.histogram('%s/%s/apply_%s'% (self.scope, prefix, gname), pl)
             self.summary_apply_gradients.append(ag)
 
         return ret_grads, ret_names, ret_apply
 
-    def do_init(self, input_size, output_size):
-        self.learning_rate_start = 0.1
+    def do_init(self, input_shape, output_size, train_mode):
+        self.learning_rate_start = 0.001
         self.reg_beta_start = 0.01
         self.transform_lr_start = 1.0
 
@@ -155,49 +132,32 @@ class nn(object):
         self.transform_params = {}
 
         self.summary_all = []
-        self.summary_weights = []
         self.episode_stats_update = []
         self.summary_apply_gradients = []
 
         global_step = tf.get_variable('global_step', [], initializer=tf.constant_initializer(0), trainable=False)
         self.transform_lr = 0.00001 + tf.train.exponential_decay(self.transform_lr_start, global_step, 30000, 0.6, staircase=True)
-        self.learning_rate = 0.00001 + tf.train.exponential_decay(self.learning_rate_start, global_step, 30000, 0.6, staircase=True)
-        self.reg_beta = tf.train.exponential_decay(self.reg_beta_start, global_step, 30000, 0.6, staircase=True)
+        self.learning_rate = 0.00001 + tf.train.exponential_decay(self.learning_rate_start, global_step, 10000, 0.5, staircase=True)
+        #self.reg_beta = tf.train.exponential_decay(self.reg_beta_start, global_step, 30000, 0.6, staircase=True)
 
-        self.add_summary(tf.summary.scalar('reg_beta', self.reg_beta))
-        self.add_summary(tf.summary.scalar('transform_lr', self.transform_lr))
+        #self.add_summary(tf.summary.scalar('reg_beta', self.reg_beta))
+        #self.add_summary(tf.summary.scalar('transform_lr', self.transform_lr))
         self.add_summary(tf.summary.scalar('learning_rate', self.learning_rate))
-        self.add_summary(tf.summary.scalar('global_step', global_step))
 
         episodes_passed_p = tf.placeholder(tf.int32, [], name='episodes_passed')
         episode_reward_p = tf.placeholder(tf.float32, [], name='episode_reward')
         total_actions_p = tf.placeholder(tf.float32, [], name='total_actions')
         random_alpha_p = tf.placeholder(tf.float32, [], name='random_alpha')
 
-        self.episodes_passed = tf.get_variable('episodes_passed', [], initializer=tf.constant_initializer(0),
-                trainable=False, dtype=tf.int32)
-        self.episode_stats_update.append(self.episodes_passed.assign(episodes_passed_p))
-
-        self.episode_reward = tf.get_variable('episode_reward', [], initializer=tf.constant_initializer(0), trainable=False)
-        self.episode_stats_update.append(self.episode_reward.assign(episode_reward_p))
-        
-        self.total_actions = tf.get_variable('total_actions', [], initializer=tf.constant_initializer(0), trainable=False)
-        self.episode_stats_update.append(self.total_actions.assign(total_actions_p))
-        
-        self.random_alpha = tf.get_variable('random_alpha', [], initializer=tf.constant_initializer(0), trainable=False)
-        self.episode_stats_update.append(self.random_alpha.assign(random_alpha_p))
-
-        self.add_summary(tf.summary.scalar('episodes_passed', self.episodes_passed))
-        self.add_summary(tf.summary.scalar('episode_reward', self.episode_reward))
-        self.add_summary(tf.summary.scalar('total_actions', self.total_actions))
-        self.add_summary(tf.summary.scalar('random_alpha', self.random_alpha))
-
-        self.init_model(input_size, output_size)
+        self.init_model(input_shape, output_size, train_mode)
 
         opt = tf.train.RMSPropOptimizer(self.learning_rate,
                 RMSPROP_DECAY,
                 momentum=RMSPROP_MOMENTUM,
                 epsilon=RMSPROP_EPSILON, name='optimizer')
+
+        self.losses = tf.losses.get_total_loss()
+        self.train_step = opt.minimize(self.losses)
 
         self.gradient_names_policy = []
         self.apply_grads_policy = []
@@ -217,8 +177,8 @@ class nn(object):
                 intra_op_parallelism_threads = 8,
                 inter_op_parallelism_threads = 8,
             )
-        self.sess = tf.Session(config=config)
-        self.summary_weights_merged = tf.summary.merge(self.summary_weights)
+        #self.sess = tf.Session(config=config)
+        self.sess = tf.Session()
         self.summary_merged = tf.summary.merge(self.summary_all)
         self.summary_apply_gradients_merged = tf.summary.merge(self.summary_apply_gradients)
 
@@ -228,15 +188,18 @@ class nn(object):
 
     def update_gradients(self, states, dret, names, grads):
         for gname, grad in zip(names, grads):
+            if np.isnan(grad).any():
+                continue
+
             #value = np.sum(grad) / float(len(states))
             value = grad / float(len(states))
             #value = grad
 
             g = dret.get(gname)
-            if not g:
-                dret[gname] = value
-            else:
+            if g:
                 g.update(value)
+            else:
+                dret[gname] = value
             #print "computed gradients %s, shape: %s" % (gname, grad.shape)
             #print grad
 
@@ -266,14 +229,13 @@ class nn(object):
         #print "apply: %s" % grads
         for n, g in grads.iteritems():
             gname = self.scope + '/' + n + ':0'
-            #print "apply gradients to %s" % (gname)
+            #print "apply gradients to %s, shape: %s" % (gname, g.shape)
             #print g
             feed_dict[gname] = g
 
-        ops = [self.summary_weights_merged, self.summary_apply_gradients_merged, self.apply_gradients_step]
-        summary_weights, summary_apply, grads = self.sess.run(ops, feed_dict=feed_dict)
-        self.summary_writer.add_summary(summary_weights, self.train_num)
-        self.summary_writer.add_summary(summary_apply, self.train_num)
+        ops = [self.apply_gradients_step, self.summary_apply_gradients_merged]
+        grads, apply_summary = self.sess.run(ops, feed_dict=feed_dict)
+        self.summary_writer.add_summary(apply_summary, self.train_num)
 
     def predict_policy(self, states):
         p = self.sess.run([self.policy], feed_dict={
@@ -291,6 +253,17 @@ class nn(object):
             })
         return p
 
+    def train(self, states, action, reward):
+        self.train_num += 1
+
+        ops = [self.summary_merged, self.train_step]
+        summary = self.sess.run(ops, feed_dict={
+                self.scope + '/x:0': states,
+                self.scope + '/action:0': action,
+                self.scope + '/reward:0': reward,
+            })
+        self.summary_writer.add_summary(summary[0], self.train_num)
+
     def export_params(self):
         return self.sess.run(self.transform_params)
 
@@ -306,13 +279,3 @@ class nn(object):
             d1[self.scope + '/' + k + '_ext:0'] = v
 
         self.sess.run(self.transform_ops, feed_dict=d1)
-        summary = self.sess.run([self.summary_weights_merged])
-        self.summary_writer.add_summary(summary[0], self.train_num)
-
-    def update_episode_stats(self, episodes, reward, total_actions, random_alpha):
-        summary = self.sess.run(self.episode_stats_update, feed_dict={
-                self.scope + '/episodes_passed:0': episodes,
-                self.scope + '/episode_reward:0': reward,
-                self.scope + '/total_actions:0': total_actions,
-                self.scope + '/random_alpha:0': random_alpha,
-            })
