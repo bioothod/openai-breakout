@@ -120,9 +120,6 @@ class runner(object):
 
         self.osize = config.get("output_size")
 
-        self.history_size = config.get("history_size")
-        self.history = history.history(self.history_size)
-
         input_shape = (self.input_shape[0], self.input_shape[1], self.input_shape[2] * self.state_steps)
 
         self.network = nn.nn(rid, input_shape, self.osize, self.swriter, train_mode)
@@ -140,7 +137,8 @@ class runner(object):
             return np.random.choice(len(p), p=p)
 
         action_probs, values = self.network.predict_both(input)
-        actions = [random_choice(p) for p in action_probs]
+        #actions = [random_choice(p) for p in action_probs]
+        actions = [np.random.choice(len(p), p=p) for p in action_probs]
 
         return actions, values
 
@@ -193,27 +191,25 @@ class runner(object):
         self.network.train(states, action, reward)
         #self.calc_grads(states, action, reward, True)
 
-    def run_batch(self):
-        if self.history.size() == 0:
+    def run_batch(self, h):
+        if len(h) == 0:
             return
 
-        #batch = self.history.last(self.batch_size)
-        batch = self.history.history
-        self.run_sample(batch)
-        self.history.clear()
+        self.run_sample(h)
 
     def update_reward(self, e, done):
         rev = 0.0
         if not done:
             rev = e.last_value
 
+        h = []
         for elm in reversed(e.history.history):
             s, a, r, sn, done = elm
             rev = r + self.gamma * rev
 
-            self.history.append((s, a, rev, sn, done))
+            h.append((s, a, rev, sn, done))
 
-        #e.last_value = rev
+        self.run_batch(h)
 
     def run(self, envs):
         states = [e.reset() for e in envs]
@@ -223,20 +219,23 @@ class runner(object):
             new_states = []
             for e, s, a, v in zip(envs, states, actions, values):
                 sn, reward, done = e.step(s, a)
-                e.last_value = v
 
                 if done or e.total_steps % self.update_reward_steps == 0:
+                    e.last_value = v
+
                     self.update_reward(e, done)
+
                     e.clear()
-                    self.run_batch()
 
                     if done:
+                        self.network.update_reward(e.creward)
+
                         e.clear_stats()
                         sn = e.reset()
 
                 new_states.append(sn)
 
-            states =  new_states
+            states = new_states
 
 
 class sync(object):

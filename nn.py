@@ -13,6 +13,9 @@ def get_scope_name(s):
 
 class nn(object):
     def __init__(self, scope, input_shape, output_size, summary_writer, train_mode):
+        self.reward_mean = 0.0
+        self.reward_mean_alpha = 0.9
+
         print "going to initialize scope %s" % scope
         self.summary_writer = summary_writer
         self.scope = scope
@@ -36,16 +39,17 @@ class nn(object):
         c1 = tf.layers.conv2d(inputs=input_layer, filters=32, kernel_size=[5,5], padding='same', activation=tf.nn.relu)
         p1 = tf.layers.max_pooling2d(inputs=c1, pool_size=2, strides=2, padding='same')
         
-        c2 = tf.layers.conv2d(inputs=p1, filters=32, kernel_size=5, padding='same', activation=tf.nn.relu)
+        c2 = tf.layers.conv2d(inputs=p1, filters=32, kernel_size=[5,5], padding='same', activation=tf.nn.relu)
         p2 = tf.layers.max_pooling2d(inputs=c2, pool_size=2, strides=2, padding='same')
         
-        c3 = tf.layers.conv2d(inputs=p2, filters=64, kernel_size=4, padding='same', activation=tf.nn.relu)
+        c3 = tf.layers.conv2d(inputs=p2, filters=64, kernel_size=[4,4], padding='same', activation=tf.nn.relu)
         p3 = tf.layers.max_pooling2d(inputs=c3, pool_size=2, strides=2, padding='same')
         
-        c4 = tf.layers.conv2d(inputs=p3, filters=64, kernel_size=3, padding='same', activation=tf.nn.relu)
+        c4 = tf.layers.conv2d(inputs=p3, filters=64, kernel_size=[3,3], padding='same', activation=tf.nn.relu)
         p4 = tf.layers.max_pooling2d(inputs=c4, pool_size=2, strides=2, padding='same')
 
         flat = tf.reshape(p4, [-1, np.prod(p4.get_shape().as_list()[1:])])
+        #flat = tf.reshape(c4, [-1, np.prod(c4.get_shape().as_list()[1:])])
         dense = tf.layers.dense(inputs=flat, units=512, activation=tf.nn.relu)
 
         policy = tf.layers.dense(inputs=dense, units=output_size)
@@ -57,16 +61,11 @@ class nn(object):
 
         log_softmax = tf.nn.log_softmax(policy)
         self.add_summary(tf.summary.scalar("log_softmax", tf.reduce_mean(log_softmax)))
+
         log_probability_per_action = tf.reduce_sum(log_softmax * actions, axis=-1, keep_dims=True)
+        self.add_summary(tf.summary.scalar("log_probability", tf.reduce_mean(log_probability_per_action)))
+
         advantage = (reward - tf.stop_gradient(self.value))
-
-
-        xentropy_loss = tf.reshape(tf.nn.softmax_cross_entropy_with_logits(labels=actions, logits=policy), [-1, 1])
-        tf.losses.add_loss(xentropy_loss)
-        self.add_summary(tf.summary.scalar("xentropy_loss", tf.reduce_mean(xentropy_loss)))
-        print "xetrnopy", xentropy_loss
-
-        self.add_summary(tf.summary.scalar("log_probability", tf.reduce_sum(log_probability_per_action)))
         self.add_summary(tf.summary.scalar("advantage_mean", tf.reduce_mean(advantage)))
 
         self.cost_policy = -advantage * log_probability_per_action
@@ -74,17 +73,26 @@ class nn(object):
         self.add_summary(tf.summary.scalar("cost_policy_mean", tf.reduce_mean(self.cost_policy)))
         print "cost_policy", self.cost_policy
 
-        self.cost_value = tf.square(self.value - reward)
+
+        self.cost_value = tf.reduce_mean(tf.square(self.value - reward), axis=-1, keep_dims=True)
         tf.losses.add_loss(self.cost_value)
         self.add_summary(tf.summary.scalar("cost_value_mean", tf.reduce_mean(self.cost_value)))
         print "cost_value", self.cost_value
 
+
+        xentropy_loss = tf.reduce_sum(self.policy * log_softmax, axis=-1, keep_dims=True) * self.reg_beta
+        tf.losses.add_loss(xentropy_loss)
+        self.add_summary(tf.summary.scalar("xentropy_loss", tf.reduce_mean(xentropy_loss)))
+        print "xetrnopy", xentropy_loss
+
+
         self.add_summary(tf.summary.scalar("input_reward_mean", tf.reduce_mean(reward)))
         self.add_summary(tf.summary.scalar("value_mean", tf.reduce_mean(self.value)))
-
         self.add_summary(tf.summary.scalar("policy_mean", tf.reduce_mean(policy)))
 
-        self.add_summary(tf.summary.scalar("loss", tf.reduce_sum(tf.losses.get_total_loss())))
+        self.losses = tf.losses.get_total_loss()
+        self.add_summary(tf.summary.scalar("loss", tf.reduce_mean(self.losses)))
+        print "loss", self.losses
 
     def add_summary(self, s):
         self.summary_all.append(s)
@@ -136,18 +144,21 @@ class nn(object):
         self.summary_apply_gradients = []
 
         global_step = tf.get_variable('global_step', [], initializer=tf.constant_initializer(0), trainable=False)
-        self.transform_lr = 0.00001 + tf.train.exponential_decay(self.transform_lr_start, global_step, 30000, 0.6, staircase=True)
-        self.learning_rate = 0.00001 + tf.train.exponential_decay(self.learning_rate_start, global_step, 10000, 0.5, staircase=True)
-        #self.reg_beta = tf.train.exponential_decay(self.reg_beta_start, global_step, 30000, 0.6, staircase=True)
+        #self.transform_lr = 0.00001 + tf.train.exponential_decay(self.transform_lr_start, global_step, 100000, 0.6, staircase=True)
+        self.learning_rate = 0.0001 + tf.train.exponential_decay(self.learning_rate_start, global_step, 100000, 0.8, staircase=True)
+        self.reg_beta = 0.0001 + tf.train.exponential_decay(self.reg_beta_start, global_step, 200000, 0.8, staircase=True)
 
-        #self.add_summary(tf.summary.scalar('reg_beta', self.reg_beta))
+        self.add_summary(tf.summary.scalar('reg_beta', self.reg_beta))
         #self.add_summary(tf.summary.scalar('transform_lr', self.transform_lr))
         self.add_summary(tf.summary.scalar('learning_rate', self.learning_rate))
 
-        episodes_passed_p = tf.placeholder(tf.int32, [], name='episodes_passed')
-        episode_reward_p = tf.placeholder(tf.float32, [], name='episode_reward')
-        total_actions_p = tf.placeholder(tf.float32, [], name='total_actions')
-        random_alpha_p = tf.placeholder(tf.float32, [], name='random_alpha')
+        #episodes_passed_p = tf.placeholder(tf.int32, [], name='episodes_passed')
+        #episode_reward_p = tf.placeholder(tf.float32, [], name='episode_reward')
+        #total_actions_p = tf.placeholder(tf.float32, [], name='total_actions')
+        #random_alpha_p = tf.placeholder(tf.float32, [], name='random_alpha')
+
+        reward_mean_p = tf.placeholder(tf.float32, [], name='reward_mean')
+        self.add_summary(tf.summary.scalar("reward_mean", reward_mean_p))
 
         self.init_model(input_shape, output_size, train_mode)
 
@@ -156,8 +167,7 @@ class nn(object):
                 momentum=RMSPROP_MOMENTUM,
                 epsilon=RMSPROP_EPSILON, name='optimizer')
 
-        self.losses = tf.losses.get_total_loss()
-        self.train_step = opt.minimize(self.losses)
+        self.train_step = opt.minimize(self.losses, global_step=global_step)
 
         self.gradient_names_policy = []
         self.apply_grads_policy = []
@@ -261,6 +271,8 @@ class nn(object):
                 self.scope + '/x:0': states,
                 self.scope + '/action:0': action,
                 self.scope + '/reward:0': reward,
+
+                self.scope + '/reward_mean:0': self.reward_mean,
             })
         self.summary_writer.add_summary(summary[0], self.train_num)
 
@@ -279,3 +291,6 @@ class nn(object):
             d1[self.scope + '/' + k + '_ext:0'] = v
 
         self.sess.run(self.transform_ops, feed_dict=d1)
+
+    def update_reward(self, r):
+        self.reward_mean = self.reward_mean_alpha * self.reward_mean + (1. - self.reward_mean_alpha) * r
