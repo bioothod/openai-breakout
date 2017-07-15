@@ -36,16 +36,16 @@ class nn(object):
 
         input_layer = tf.reshape(x, [-1, input_shape[0], input_shape[1], input_shape[2]])
 
-        c1 = tf.layers.conv2d(inputs=input_layer, filters=32, kernel_size=[5,5], padding='same', activation=tf.nn.relu)
+        c1 = tf.layers.conv2d(inputs=input_layer, filters=32, kernel_size=5, padding='same', activation=tf.nn.relu)
         p1 = tf.layers.max_pooling2d(inputs=c1, pool_size=2, strides=2, padding='same')
         
-        c2 = tf.layers.conv2d(inputs=p1, filters=32, kernel_size=[5,5], padding='same', activation=tf.nn.relu)
+        c2 = tf.layers.conv2d(inputs=p1, filters=32, kernel_size=5, padding='same', activation=tf.nn.relu)
         p2 = tf.layers.max_pooling2d(inputs=c2, pool_size=2, strides=2, padding='same')
         
-        c3 = tf.layers.conv2d(inputs=p2, filters=64, kernel_size=[4,4], padding='same', activation=tf.nn.relu)
+        c3 = tf.layers.conv2d(inputs=p2, filters=64, kernel_size=4, padding='same', activation=tf.nn.relu)
         p3 = tf.layers.max_pooling2d(inputs=c3, pool_size=2, strides=2, padding='same')
         
-        c4 = tf.layers.conv2d(inputs=p3, filters=64, kernel_size=[3,3], padding='same', activation=tf.nn.relu)
+        c4 = tf.layers.conv2d(inputs=p3, filters=64, kernel_size=3, padding='same', activation=tf.nn.relu)
         p4 = tf.layers.max_pooling2d(inputs=c4, pool_size=2, strides=2, padding='same')
 
         flat = tf.reshape(p4, [-1, np.prod(p4.get_shape().as_list()[1:])])
@@ -146,7 +146,7 @@ class nn(object):
         global_step = tf.get_variable('global_step', [], initializer=tf.constant_initializer(0), trainable=False)
         #self.transform_lr = 0.00001 + tf.train.exponential_decay(self.transform_lr_start, global_step, 100000, 0.6, staircase=True)
         self.learning_rate = 0.0001 + tf.train.exponential_decay(self.learning_rate_start, global_step, 100000, 0.8, staircase=True)
-        self.reg_beta = 0.0001 + tf.train.exponential_decay(self.reg_beta_start, global_step, 200000, 0.8, staircase=True)
+        self.reg_beta = 0.0001 + tf.train.exponential_decay(self.reg_beta_start, global_step, 100000, 0.8, staircase=True)
 
         self.add_summary(tf.summary.scalar('reg_beta', self.reg_beta))
         #self.add_summary(tf.summary.scalar('transform_lr', self.transform_lr))
