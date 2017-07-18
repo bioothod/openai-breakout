@@ -113,6 +113,7 @@ class runner(object):
         self.ra_alpha_cap = config.get("ra_alpha_cap")
         self.ra_alpha = config.get("ra_alpha")
 
+        self.batch = []
         self.batch_size = config.get("batch_size")
 
         self.state_steps = config.get("state_steps")
@@ -209,7 +210,10 @@ class runner(object):
 
             h.append((s, a, rev, sn, done))
 
-        self.run_batch(h)
+        self.batch += h
+        if len(self.batch) >= self.batch_size:
+            self.run_batch(self.batch)
+            self.batch = []
 
     def run(self, envs):
         states = [e.reset() for e in envs]
