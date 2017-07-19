@@ -10,10 +10,10 @@ import history
 import state
 
 class env_holder(object):
-    def __init__(self, rid, config):
+    def __init__(self, eid, config):
         self.env = gym.make(config.get("game"))
         self.osize = self.env.action_space.n
-        self.rid = rid
+        self.eid = eid
 
         self.input_shape = config.get('input_shape')
 
@@ -65,12 +65,12 @@ class env_holder(object):
             std = np.std(self.last_rewards)
 
             print "%s: %4d: reward: %4d, total steps: %7d, mean reward over last %3d episodes: %.1f, std: %.1f" % (
-                    self.rid, self.episodes, self.creward, self.total_steps, len(self.last_rewards), mean, std)
+                    self.eid, self.episodes, self.creward, self.total_steps, len(self.last_rewards), mean, std)
 
             self.episodes += 1
 
         #print "%s: %4d: reward: %4d, total steps: %7d, action: %d" % (
-        #            self.rid, self.episodes, self.creward, self.total_steps, action)
+        #            self.eid, self.episodes, self.creward, self.total_steps, action)
         return sn, reward, done
 
     def clear_stats(self):
@@ -83,3 +83,17 @@ class env_holder(object):
     def last(self, batch_size):
         return self.history.last(batch_size)
 
+class env_set(object):
+    def __init__(self, rid, config):
+        self.envs = []
+
+        env_num = config.get('env_num')
+
+        print rid
+        for i in range(env_num):
+            eid = 'r%02d.%02d' % (rid, i)
+
+            e = env_holder(eid, config)
+            config.put('output_size', e.osize)
+
+            self.envs.append(e)

@@ -9,14 +9,7 @@ import gradient
 import nn
 
 class runner(object):
-    def __init__(self, rid, config, train_mode):
-        self.swriter = None
-        output_path = config.get("output_path")
-        if output_path:
-            output_path += '.%s' % (rid)
-            self.swriter = tf.summary.FileWriter(output_path)
-       
-        self.rid = rid
+    def __init__(self, network, config):
         self.config = config
 
         self.grads = {}
@@ -35,15 +28,11 @@ class runner(object):
 
         self.batch = []
         self.batch_size = config.get("batch_size")
-
+ 
         self.state_steps = config.get("state_steps")
         self.input_shape = config.get("input_shape")
 
-        self.osize = config.get("output_size")
-
-        input_shape = (self.input_shape[0], self.input_shape[1], self.input_shape[2] * self.state_steps)
-
-        self.network = nn.nn(rid, input_shape, self.osize, self.swriter, train_mode)
+        self.network = network
 
     def get_actions(self, states):
         input = [s.read() for s in states]
@@ -135,10 +124,10 @@ class runner(object):
             self.run_batch(self.batch)
             self.batch = []
 
-    def run(self, envs):
+    def run(self, envs, coord):
         states = [e.reset() for e in envs]
 
-        while True:
+        while not coord.should_stop():
             actions, values = self.get_actions(states)
             new_states = []
             for e, s, a, v in zip(envs, states, actions, values):
@@ -161,18 +150,40 @@ class runner(object):
 
             states = new_states
 
+        coord.request_stop()
 
 class sync(object):
-    def __init__(self, nr_runners, config, train_mode):
-        self.envs = []
-        for i in range(nr_runners):
-            rid = 'runner%02d' % i
-            
-            e = env.env_holder(rid, config)
-            self.envs.append(e)
-        
-        config.put('output_size', self.envs[0].osize)
-        self.network = runner('main', config, train_mode)
+    def __init__(self, nr_runners, config):
+        self.coord = tf.train.Coordinator()
+
+        self.env_sets = [env.env_set(r, config) for r in range(nr_runners)]
+
+        self.network = self.init_network(config)
+
+        self.runners = [runner(self.network, config) for r in range(nr_runners)]
+
+    def init_network(self, config):
+        self.swriter = None
+
+        output_path = config.get("output_path")
+        if output_path:
+            self.swriter = tf.summary.FileWriter(output_path)
+
+        state_steps = config.get("state_steps")
+        config_input_shape = config.get("input_shape")
+
+        input_shape = (config_input_shape[0], config_input_shape[1], config_input_shape[2] * state_steps)
+        osize = config.get('output_size')
+
+        return nn.nn("main", input_shape, osize, self.swriter)
 
     def start(self):
-        self.network.run(self.envs)
+        threads = [threading.Thread(target=r.run, args=(es.envs, self.coord,)) for r, es in zip(self.runners, self.env_sets)]
+        for t in threads:
+            t.start()
+
+        try:
+            self.coord.join(threads)
+        except:
+            self.coord.request_stop()
+            self.coord.join(threads)

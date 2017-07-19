@@ -12,7 +12,7 @@ def get_scope_name(s):
     return s.split('/')[0].split(':')[0]
 
 class nn(object):
-    def __init__(self, scope, input_shape, output_size, summary_writer, train_mode):
+    def __init__(self, scope, input_shape, output_size, summary_writer):
         self.reward_mean = 0.0
         self.reward_mean_alpha = 0.9
 
@@ -21,10 +21,10 @@ class nn(object):
         self.scope = scope
         with tf.variable_scope(scope) as vscope:
             self.vscope = vscope
-            self.do_init(input_shape, output_size, train_mode)
+            self.do_init(input_shape, output_size)
             print "scope %s has been initialized" % scope
 
-    def init_model(self, input_shape, output_size, train_mode):
+    def init_model(self, input_shape, output_size):
         print "init_model scope: %s" % (tf.get_variable_scope().name)
 
         x = tf.placeholder(tf.float32, [None, input_shape[0], input_shape[1], input_shape[2]], name='x')
@@ -140,7 +140,7 @@ class nn(object):
 
         return ret_grads, ret_names, ret_apply
 
-    def do_init(self, input_shape, output_size, train_mode):
+    def do_init(self, input_shape, output_size):
         self.learning_rate_start = 0.0003
         self.reg_beta_start = 0.01
         self.transform_lr_start = 1.0
@@ -173,7 +173,7 @@ class nn(object):
         reward_mean_p = tf.placeholder(tf.float32, [], name='reward_mean')
         self.add_summary(tf.summary.scalar("reward_mean", reward_mean_p))
 
-        self.init_model(input_shape, output_size, train_mode)
+        self.init_model(input_shape, output_size)
 
         opt = tf.train.RMSPropOptimizer(self.learning_rate,
                 RMSPROP_DECAY,
