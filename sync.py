@@ -1,92 +1,12 @@
 import tensorflow as tf
 import numpy as np
 
-from collections import deque
-from copy import deepcopy
-
-import cv2
-import gym
 import math
 import threading
 
+import env
 import gradient
-import history
 import nn
-import state
-
-class env_holder(object):
-    def __init__(self, rid, config):
-        self.env = gym.make(config.get("game"))
-        self.osize = self.env.action_space.n
-        self.rid = rid
-
-        self.input_shape = config.get('input_shape')
-
-        self.state_steps = config.get("state_steps")
-        self.current_state = state.state(self.input_shape, self.state_steps)
-
-        self.history = history.history(10000)
-
-        self.last_value = 0.0
-        self.creward = 0
-
-        self.last_rewards = deque()
-        self.last_rewards_size = 100
-
-        self.episodes = 0
-        self.total_steps = 0
-
-    def new_state(self, obs):
-        state = obs[35:195]
-        state = state[::, ::, 0]
-
-        state = state.astype(np.float32)
-        res = cv2.resize(state, (self.input_shape[0], self.input_shape[1]))
-        res /= 255.
-
-        res = np.reshape(res, self.input_shape)
-
-        self.current_state.push_tensor(res)
-        return deepcopy(self.current_state)
-
-    def reset(self):
-        self.current_state = state.state(self.input_shape, self.state_steps)
-        obs = self.env.reset()
-        return self.new_state(obs)
-
-    def step(self, s, action):
-        obs, reward, done, info = self.env.step(action)
-        sn = self.new_state(obs)
-        self.history.append((s, action, reward, sn, done))
-        self.creward += reward
-        self.total_steps += 1
-
-        if done:
-            if len(self.last_rewards) >= self.last_rewards_size:
-                self.last_rewards.popleft()
-
-            self.last_rewards.append(self.creward)
-            mean = np.mean(self.last_rewards)
-            std = np.std(self.last_rewards)
-
-            print "%s: %4d: reward: %4d, total steps: %7d, mean reward over last %3d episodes: %.1f, std: %.1f" % (
-                    self.rid, self.episodes, self.creward, self.total_steps, len(self.last_rewards), mean, std)
-
-            self.episodes += 1
-
-        #print "%s: %4d: reward: %4d, total steps: %7d, action: %d" % (
-        #            self.rid, self.episodes, self.creward, self.total_steps, action)
-        return sn, reward, done
-
-    def clear_stats(self):
-        self.creward = 0
-        self.last_value = 0.0
-
-    def clear(self):
-        self.history.clear()
-
-    def last(self, batch_size):
-        return self.history.last(batch_size)
 
 class runner(object):
     def __init__(self, rid, config, train_mode):
@@ -248,7 +168,7 @@ class sync(object):
         for i in range(nr_runners):
             rid = 'runner%02d' % i
             
-            e = env_holder(rid, config)
+            e = env.env_holder(rid, config)
             self.envs.append(e)
         
         config.put('output_size', self.envs[0].osize)
