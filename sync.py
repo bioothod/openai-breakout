@@ -137,7 +137,7 @@ class runner(object):
 
             return np.random.choice(len(p), p=p)
 
-        action_probs, values = self.network.predict_both(input)
+        action_probs, values = self.network.predict(input)
         #actions = [random_choice(p) for p in action_probs]
         actions = [np.random.choice(len(p), p=p) for p in action_probs]
 

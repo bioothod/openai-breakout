@@ -49,12 +49,17 @@ class nn(object):
         p4 = tf.layers.max_pooling2d(inputs=c4, pool_size=2, strides=2, padding='same')
 
         flat = tf.reshape(p4, [-1, np.prod(p4.get_shape().as_list()[1:])])
-        #flat = tf.reshape(c4, [-1, np.prod(c4.get_shape().as_list()[1:])])
-        dense = tf.layers.dense(inputs=flat, units=512, activation=tf.nn.relu)
+        dense = tf.layers.dense(inputs=flat, units=1024, activation=tf.nn.relu)
+        dropout_train = tf.layers.dropout(inputs=dense, rate=0.4, training=True)
+        dropout_predict = tf.layers.dropout(inputs=dense, rate=0.4, training=False)
 
-        policy = tf.layers.dense(inputs=dense, units=output_size)
+        policy = tf.layers.dense(inputs=dropout_train, units=output_size)
         self.policy = tf.nn.softmax(policy)
-        self.value = tf.layers.dense(inputs=dense, units=1)
+        self.value = tf.layers.dense(inputs=dropout_train, units=1)
+
+        predict_policy = tf.layers.dense(inputs=dropout_predict, units=output_size)
+        self.predict_policy = tf.nn.softmax(predict_policy)
+        self.predict_value = tf.layers.dense(inputs=dropout_predict, units=1)
 
         actions = tf.one_hot(action, output_size)
         actions = tf.squeeze(actions, 1)
@@ -253,18 +258,8 @@ class nn(object):
         grads, apply_summary = self.sess.run(ops, feed_dict=feed_dict)
         self.summary_writer.add_summary(apply_summary, self.train_num)
 
-    def predict_policy(self, states):
-        p = self.sess.run([self.policy], feed_dict={
-                self.scope + '/x:0': states,
-            })
-        return p[0]
-    def predict_value(self, states):
-        p = self.sess.run([self.value], feed_dict={
-                self.scope + '/x:0': states,
-            })
-        return p[0]
-    def predict_both(self, states):
-        p = self.sess.run([self.policy, self.value], feed_dict={
+    def predict(self, states):
+        p = self.sess.run([self.predict_policy, self.predict_value], feed_dict={
                 self.scope + '/x:0': states,
             })
         return p
