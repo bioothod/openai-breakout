@@ -52,7 +52,7 @@ class nn(object):
 
         dense = tf.layers.dense(inputs=flat, units=512, activation=tf.nn.relu, kernel_regularizer=tf.nn.l2_loss)
 
-        policy = tf.layers.dense(inputs=dense, units=output_size)
+        policy = tf.layers.dense(inputs=dense, units=output_size, activation=tf.sigmoid)
         self.policy = tf.nn.softmax(policy)
         self.value = tf.layers.dense(inputs=dense, units=1)
 
