@@ -65,8 +65,6 @@ class nn(object):
         log_softmax_logexp = tf.log(tf.reduce_sum(tf.exp(policy)))
         self.add_summary(tf.summary.scalar("log_softmax_logexp_mean", tf.reduce_mean(log_softmax_logexp)))
 
-        self.add_summary(tf.summary.scalar("action_mean", tf.reduce_mean(action, axis=0)))
-
         log_probability_per_action = tf.reduce_sum(log_softmax * actions, axis=-1, keep_dims=True)
         self.add_summary(tf.summary.scalar("log_probability_mean", tf.reduce_mean(log_probability_per_action)))
 
