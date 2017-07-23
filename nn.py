@@ -50,9 +50,9 @@ class nn(object):
 
         flat = tf.reshape(p4, [-1, np.prod(p4.get_shape().as_list()[1:])])
 
-        dense = tf.layers.dense(inputs=flat, units=512, activation=tf.nn.relu, kernel_regularizer=tf.nn.l2_loss)
+        dense = tf.layers.dense(inputs=flat, units=512, activation=tf.nn.relu)
 
-        policy = tf.layers.dense(inputs=dense, units=output_size, activation=tf.sigmoid)
+        policy = tf.layers.dense(inputs=dense, units=output_size)
         self.policy = tf.nn.softmax(policy)
         self.value = tf.layers.dense(inputs=dense, units=1)
 
@@ -65,7 +65,7 @@ class nn(object):
         log_softmax_logexp = tf.log(tf.reduce_sum(tf.exp(policy)))
         self.add_summary(tf.summary.scalar("log_softmax_logexp_mean", tf.reduce_mean(log_softmax_logexp)))
 
-        self.add_summary(tf.summary.scalar("action_mean", tf.reduce_mean(action)))
+        self.add_summary(tf.summary.scalar("action_mean", tf.reduce_mean(action, axis=0)))
 
         log_probability_per_action = tf.reduce_sum(log_softmax * actions, axis=-1, keep_dims=True)
         self.add_summary(tf.summary.scalar("log_probability_mean", tf.reduce_mean(log_probability_per_action)))
@@ -74,12 +74,12 @@ class nn(object):
         self.add_summary(tf.summary.scalar("advantage_mean", tf.reduce_mean(advantage)))
 
         self.cost_policy = -advantage * log_probability_per_action
-        tf.losses.add_loss(tf.reduce_sum(self.cost_policy))
+        tf.losses.add_loss(self.cost_policy)
         self.add_summary(tf.summary.scalar("cost_policy_mean", tf.reduce_mean(self.cost_policy)))
 
 
         self.cost_value = tf.reduce_mean(tf.square(self.value - reward), axis=-1, keep_dims=True)
-        tf.losses.add_loss(tf.reduce_sum(self.cost_value))
+        tf.losses.add_loss(self.cost_value)
         self.add_summary(tf.summary.scalar("cost_value_mean", tf.reduce_mean(self.cost_value)))
 
 
@@ -87,7 +87,7 @@ class nn(object):
         self.add_summary(tf.summary.scalar("xentropy_mean", tf.reduce_mean(xentropy)))
 
         xentropy_loss = xentropy * self.reg_beta
-        tf.losses.add_loss(tf.reduce_sum(xentropy_loss))
+        tf.losses.add_loss(xentropy_loss)
         self.add_summary(tf.summary.scalar("xentropy_loss_mean", tf.reduce_mean(xentropy_loss)))
 
 
@@ -95,13 +95,7 @@ class nn(object):
         self.add_summary(tf.summary.scalar("value_mean", tf.reduce_mean(self.value)))
         self.add_summary(tf.summary.scalar("policy_mean", tf.reduce_mean(policy)))
 
-        reg_ws = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES, 'main')
-        for w in reg_ws:
-            shp = w.get_shape().as_list()
-            print("- {} shape:{} size:{}".format(w.name, shp, np.prod(shp)))
-        print("")
-
-        self.losses = tf.losses.get_total_loss(add_regularization_losses=True)
+        self.losses = tf.losses.get_total_loss()
         self.add_summary(tf.summary.scalar("loss_mean", tf.reduce_mean(self.losses)))
 
 
