@@ -32,6 +32,10 @@ class runner(object):
         self.state_steps = config.get("state_steps")
         self.input_shape = config.get("input_shape")
 
+        self.save_per_total_steps = config.get('save_per_total_steps')
+        self.save_per_minutes = config.get('save_per_minutes')
+        self.save_timer = time.time()
+
         self.network = network
 
     def get_actions(self, states):
@@ -96,8 +100,6 @@ class runner(object):
             reward[idx] = r
             idx += 1
 
-        have_done = False
-
         self.network.train(states, action, reward)
         #self.calc_grads(states, action, reward, True)
 
@@ -148,12 +150,33 @@ class runner(object):
 
                 new_states.append(sn)
 
+                self.check_save()
+
             states = new_states
 
         coord.request_stop()
 
 class sync(object):
     def __init__(self, nr_runners, config):
+        self.swriter = None
+        self.saver = None
+        self.save_per_total_steps = None
+        self.save_per_minutes = None
+
+        output_path = config.get("output_path")
+        if output_path:
+            self.swriter = tf.summary.FileWriter(output_path)
+
+        self.saved_total_steps = 0
+        self.saved_time = 0
+        save_path = config.get('save_path')
+        if save_path:
+            self.saver = tf.train.Saver()
+            self.save_path = save_path
+
+            self.save_per_total_steps = config.get('save_per_total_steps', 10000)
+            self.save_per_minutes = config.get('save_per_minutes')
+
         self.coord = tf.train.Coordinator()
 
         self.env_sets = [env.env_set(r, config) for r in range(nr_runners)]
@@ -163,12 +186,6 @@ class sync(object):
         self.runners = [runner(self.network, config) for r in range(nr_runners)]
 
     def init_network(self, config):
-        self.swriter = None
-
-        output_path = config.get("output_path")
-        if output_path:
-            self.swriter = tf.summary.FileWriter(output_path)
-
         state_steps = config.get("state_steps")
         config_input_shape = config.get("input_shape")
 
@@ -187,3 +204,21 @@ class sync(object):
         except:
             self.coord.request_stop()
             self.coord.join(threads)
+
+    def check_save(self):
+        if not self.save_path:
+            return
+
+        if self.save_per_total_steps:
+            if self.total_steps >= self.saved_total_steps + self.save_per_total_save:
+                self.network.save(self.save_path)
+                self.saved_time = time.time()
+                self.saved_total_steps = self.total_steps
+                return
+
+        if self.save_per_minutes:
+            if time.time() > self.saved_time + self.save_per_minute * 60:
+                self.network.save(self.save_path)
+                self.saved_time = time.time()
+                self.saved_total_steps = self.total_steps
+                return

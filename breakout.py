@@ -15,7 +15,13 @@ class breakout(object):
         c.put('state_steps', 2)
         c.put('history_size', 100)
         c.put('env_num', 50)
-        c.put('output_path', 'output/%s.%d' % (c.get("game"), time.time()))
+
+        name = '%s.%d' % (c.get("game"), time.time())
+        c.put('output_path', 'output/' + name)
+
+        c.put('save_path', 'save/' + name)
+        c.put('save_per_total_steps', 10000)
+        c.put('save_per_minutes', 60)
 
         self.ac = sync.sync(2, c)
 

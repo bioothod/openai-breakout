@@ -12,9 +12,11 @@ def get_scope_name(s):
     return s.split('/')[0].split(':')[0]
 
 class nn(object):
-    def __init__(self, scope, input_shape, output_size, summary_writer):
+    def __init__(self, scope, input_shape, output_size, summary_writer, saver):
         self.reward_mean = 0.0
         self.reward_mean_alpha = 0.9
+
+        self.saver = saver
 
         print "going to initialize scope %s" % scope
         self.summary_writer = summary_writer
@@ -146,12 +148,12 @@ class nn(object):
         self.episode_stats_update = []
         self.summary_apply_gradients = []
 
-        global_step = tf.get_variable('global_step', [], initializer=tf.constant_initializer(0), trainable=False)
-        #self.transform_lr = 0.00001 + tf.train.exponential_decay(self.transform_lr_start, global_step, 100000, 0.6, staircase=True)
-        #self.learning_rate = 0.0003 + tf.train.exponential_decay(self.learning_rate_start, global_step, 100000, 0.9, staircase=True)
+        self.global_step = tf.get_variable('global_step', [], initializer=tf.constant_initializer(0), trainable=False)
+        #self.transform_lr = 0.00001 + tf.train.exponential_decay(self.transform_lr_start, self.global_step, 100000, 0.6, staircase=True)
+        #self.learning_rate = 0.0003 + tf.train.exponential_decay(self.learning_rate_start, self.global_step, 100000, 0.9, staircase=True)
         self.learning_rate = 0.0005
         self.reg_beta = 0.01
-        #self.reg_beta = 0.0001 + tf.train.exponential_decay(self.reg_beta_start, global_step, 100000, 1.5, staircase=True)
+        #self.reg_beta = 0.0001 + tf.train.exponential_decay(self.reg_beta_start, self.global_step, 100000, 1.5, staircase=True)
 
         self.add_summary(tf.summary.scalar('reg_beta', self.reg_beta))
         #self.add_summary(tf.summary.scalar('transform_lr', self.transform_lr))
@@ -172,7 +174,7 @@ class nn(object):
                 momentum=RMSPROP_MOMENTUM,
                 epsilon=RMSPROP_EPSILON, name='optimizer')
 
-        self.train_step = opt.minimize(self.losses, global_step=global_step)
+        self.train_step = opt.minimize(self.losses, global_step=self.global_step)
 
         self.gradient_names_policy = []
         self.apply_grads_policy = []
@@ -186,7 +188,7 @@ class nn(object):
 
         apply_gradients = self.apply_grads_policy + self.apply_grads_value
 
-        self.apply_gradients_step = opt.apply_gradients(apply_gradients, global_step=global_step)
+        self.apply_gradients_step = opt.apply_gradients(apply_gradients, global_step=self.global_step)
 
         config=tf.ConfigProto(
                 intra_op_parallelism_threads = 8,
@@ -289,3 +291,11 @@ class nn(object):
 
     def update_reward(self, r):
         self.reward_mean = self.reward_mean_alpha * self.reward_mean + (1. - self.reward_mean_alpha) * r
+
+    def save(self, path):
+        if self.saver:
+            self.saver.save(self.sess, path, global_step=self.global_step)
+
+    def restore(self, path):
+        if self.saver:
+            self.saver.restore(self.sess, path)
