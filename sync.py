@@ -58,16 +58,16 @@ class sync(object):
         if not self.save_path:
             return
 
-        if self.save_per_total_steps:
-            if self.total_steps >= self.saved_total_steps + self.save_per_total_save:
-                self.network.save(self.save_path)
-                self.saved_time = time.time()
-                self.saved_total_steps = self.total_steps
-                return
+        #if self.save_per_total_steps:
+        #    if self.total_steps >= self.saved_total_steps + self.save_per_total_save:
+        #        self.network.save(self.save_path)
+        #        self.saved_time = time.time()
+        #        self.saved_total_steps = self.total_steps
+        #        return
 
         if self.save_per_minutes:
             if time.time() > self.saved_time + self.save_per_minute * 60:
                 self.network.save(self.save_path)
                 self.saved_time = time.time()
-                self.saved_total_steps = self.total_steps
+                #self.saved_total_steps = self.total_steps
                 return
