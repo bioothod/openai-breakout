@@ -12,11 +12,9 @@ def get_scope_name(s):
     return s.split('/')[0].split(':')[0]
 
 class nn(object):
-    def __init__(self, scope, input_shape, output_size, summary_writer, saver):
+    def __init__(self, scope, input_shape, output_size, summary_writer):
         self.reward_mean = 0.0
         self.reward_mean_alpha = 0.9
-
-        self.saver = saver
 
         print "going to initialize scope %s" % scope
         self.summary_writer = summary_writer
@@ -25,6 +23,8 @@ class nn(object):
             self.vscope = vscope
             self.do_init(input_shape, output_size)
             print "scope %s has been initialized" % scope
+        
+        self.saver = tf.train.Saver()
 
     def init_model(self, input_shape, output_size):
         print "init_model scope: %s" % (tf.get_variable_scope().name)

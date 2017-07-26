@@ -10,7 +10,6 @@ import runner
 class sync(object):
     def __init__(self, nr_runners, config):
         self.swriter = None
-        self.saver = None
         self.save_per_total_steps = None
         self.save_per_minutes = None
 
@@ -28,7 +27,6 @@ class sync(object):
         self.saved_time = 0
         save_path = config.get('save_path')
         if save_path:
-            self.saver = tf.train.Saver()
             self.save_path = save_path
 
             self.save_per_total_steps = config.get('save_per_total_steps', 10000)
