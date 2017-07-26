@@ -228,6 +228,8 @@ class nn(object):
                 self.scope + '/x:0': states,
                 self.scope + '/action:0': action,
                 self.scope + '/reward:0': reward,
+
+                self.scope + '/reward_mean:0': self.reward_mean,
             })
         self.summary_writer.add_summary(summary, self.train_num)
 
