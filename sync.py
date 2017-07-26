@@ -18,6 +18,12 @@ class sync(object):
         if output_path:
             self.swriter = tf.summary.FileWriter(output_path)
 
+        self.coord = tf.train.Coordinator()
+
+        self.env_sets = [env.env_set(r, config) for r in range(nr_runners)]
+
+        self.network = self.init_network(config)
+
         self.saved_total_steps = 0
         self.saved_time = 0
         save_path = config.get('save_path')
@@ -27,12 +33,6 @@ class sync(object):
 
             self.save_per_total_steps = config.get('save_per_total_steps', 10000)
             self.save_per_minutes = config.get('save_per_minutes')
-
-        self.coord = tf.train.Coordinator()
-
-        self.env_sets = [env.env_set(r, config) for r in range(nr_runners)]
-
-        self.network = self.init_network(config)
 
         self.runners = [runner.runner(self.network, config) for r in range(nr_runners)]
 
