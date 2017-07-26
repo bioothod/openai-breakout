@@ -44,7 +44,7 @@ class sync(object):
         return nn.nn("main", input_shape, osize, self.swriter)
 
     def start(self):
-        threads = [threading.Thread(target=r.run, args=(es.envs, self.coord,)) for r, es in zip(self.runners, self.env_sets)]
+        threads = [threading.Thread(target=r.run, args=(es.envs, self.coord, self.check_save)) for r, es in zip(self.runners, self.env_sets)]
         for t in threads:
             t.start()
 

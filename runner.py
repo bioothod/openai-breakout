@@ -28,10 +28,6 @@ class runner(object):
         self.state_steps = config.get("state_steps")
         self.input_shape = config.get("input_shape")
 
-        self.save_per_total_steps = config.get('save_per_total_steps')
-        self.save_per_minutes = config.get('save_per_minutes')
-        self.save_timer = time.time()
-
         self.network = network
 
     def get_actions(self, states):
@@ -122,7 +118,7 @@ class runner(object):
             self.run_batch(self.batch)
             self.batch = []
 
-    def run(self, envs, coord):
+    def run(self, envs, coord, check_save):
         states = [e.reset() for e in envs]
 
         while not coord.should_stop():
@@ -146,7 +142,7 @@ class runner(object):
 
                 new_states.append(sn)
 
-                self.check_save()
+                check_save()
 
             states = new_states
 
