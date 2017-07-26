@@ -1,7 +1,5 @@
 import numpy as np
 
-import time
-
 import gradient
 
 class runner(object):
