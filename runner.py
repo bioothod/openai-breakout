@@ -3,7 +3,7 @@ import numpy as np
 import gradient
 
 class runner(object):
-    def __init__(self, network, config):
+    def __init__(self, network, follower, config):
         self.config = config
 
         self.grads = {}
@@ -26,7 +26,10 @@ class runner(object):
         self.state_steps = config.get("state_steps")
         self.input_shape = config.get("input_shape")
 
+        self.follower_update_steps = config.get('follower_update_steps')
+
         self.network = network
+        self.follower = follower
 
     def get_actions(self, states):
         input = [s.read() for s in states]
@@ -40,7 +43,7 @@ class runner(object):
 
             return np.random.choice(len(p), p=p)
 
-        action_probs, values = self.network.predict(input)
+        action_probs, values = self.follower.predict(input)
         #actions = [random_choice(p) for p in action_probs]
         actions = [np.random.choice(len(p), p=p) for p in action_probs]
 
@@ -68,9 +71,6 @@ class runner(object):
             for n, g in self.grads.iteritems():
                 g.clear()
 
-    def update_episode_stats(self, episodes, reward):
-        self.network.update_episode_stats(episodes, reward, self.total_actions, self.ra_alpha)
-
     def run_sample(self, batch):
         states_shape = (len(batch), self.input_shape[0], self.input_shape[1], self.input_shape[2] * self.state_steps)
         states = np.zeros(shape=states_shape)
@@ -92,6 +92,10 @@ class runner(object):
 
         self.network.train(states, action, reward)
         #self.calc_grads(states, action, reward, True)
+
+        if self.total_steps % self.follower_update_steps == 0:
+            print "updating params"
+            self.follower.import_params(self.network.export_params(), self.follower.transform_rate)
 
     def run_batch(self, h):
         if len(h) == 0:

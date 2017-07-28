@@ -16,6 +16,8 @@ class breakout(object):
         c.put('history_size', 100)
         c.put('env_num', 50)
 
+        c.put('follower_update_steps', 300)
+
         name = '%s.%d' % (c.get("game"), time.time())
         c.put('output_path', 'output/' + name)
 

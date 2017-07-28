@@ -7,9 +7,11 @@ RMSPROP_MOMENTUM = 0.9             # Momentum in RMSProp.
 RMSPROP_EPSILON = 1.0              # Epsilon term for RMSProp.
 
 def get_param_name(s):
-    return s.split('/')[1].split(':')[0]
+    return s.split('/', 1)[1].split(':')[0]
 def get_scope_name(s):
     return s.split('/')[0].split(':')[0]
+def get_transform_placeholder_name(s):
+    return get_param_name(s) + '_ext'
 
 class nn(object):
     def __init__(self, scope, input_shape, output_size, summary_writer):
@@ -118,8 +120,8 @@ class nn(object):
             if self.scope != get_scope_name(var.name):
                 continue
 
-            gname = grad.name.replace('/', 'X').split(':')[0]
-            print "gradient %s -> %s" % (var, gname)
+            gname = get_param_name(grad.name)
+            #print "gradient %s -> %s" % (var, gname)
 
             # get all gradients
             ret_grads.append(grad)
@@ -137,12 +139,9 @@ class nn(object):
     def do_init(self, input_shape, output_size):
         self.learning_rate_start = 0.0003
         self.reg_beta_start = 0.01
-        self.transform_lr_start = 1.0
+        self.transform_rate_start = 1.0
 
         self.train_num = 0
-
-        self.transform_ops = []
-        self.transform_params = {}
 
         self.summary_all = []
         self.episode_stats_update = []
@@ -153,6 +152,7 @@ class nn(object):
         #self.learning_rate = 0.0003 + tf.train.exponential_decay(self.learning_rate_start, self.global_step, 100000, 0.9, staircase=True)
         self.learning_rate = 0.0005
         self.reg_beta = 0.01
+        self.transform_rate = 0.9
         #self.reg_beta = 0.0001 + tf.train.exponential_decay(self.reg_beta_start, self.global_step, 100000, 1.5, staircase=True)
 
         self.add_summary(tf.summary.scalar('reg_beta', self.reg_beta))
@@ -189,6 +189,18 @@ class nn(object):
         apply_gradients = self.apply_grads_policy + self.apply_grads_value
 
         self.apply_gradients_step = opt.apply_gradients(apply_gradients, global_step=self.global_step)
+
+        self.assign_ops = []
+        self.transform_variables = []
+        for v in tf.trainable_variables():
+            if self.scope != get_scope_name(v.name):
+                continue
+
+            ev = tf.placeholder(tf.float32, None, name=get_transform_placeholder_name(v.name))
+            self.assign_ops.append(tf.assign(v, ev, validate_shape=False))
+
+            self.transform_variables.append(v)
+            print "{0}: transform variable: {1}".format(self.scope, v)
 
         config=tf.ConfigProto(
                 intra_op_parallelism_threads = 8,
@@ -276,20 +288,29 @@ class nn(object):
         self.summary_writer.add_summary(summary[0], self.train_num)
 
     def export_params(self):
-        return self.sess.run(self.transform_params)
+        res = self.sess.run(self.transform_variables)
+        d = {}
+        for k, v in zip(self.transform_variables, res):
+            #print "export: {0}: {1}".format(self.scope, k)
+            d[k] = v
+        return d
 
-    def transform(self, x1, x2):
-        lr = 0.9
-        return x1 * lr + x2 * (1 - lr)
-
-    def import_params(self, d):
+    def import_params(self, d, rate):
         self.train_num += 1
+
+        def name(v):
+            return self.scope + '/' + get_transform_placeholder_name(v.name) + ':0'
 
         d1 = {}
         for k, v in d.iteritems():
-            d1[self.scope + '/' + k + '_ext:0'] = v
+            d1[name(k)] = v
 
-        self.sess.run(self.transform_ops, feed_dict=d1)
+        for k, v in self.export_params().iteritems():
+            var = d1.get(name(k), v)
+
+            d1[name(k)] = v * rate + var * (1. - rate)
+
+        self.sess.run(self.assign_ops, feed_dict=d1)
 
     def update_reward(self, r):
         self.reward_mean = self.reward_mean_alpha * self.reward_mean + (1. - self.reward_mean_alpha) * r
