@@ -93,10 +93,6 @@ class runner(object):
         self.network.train(states, action, reward)
         #self.calc_grads(states, action, reward, True)
 
-        if self.total_steps % self.follower_update_steps == 0:
-            print "updating params"
-            self.follower.import_params(self.network.export_params(), self.follower.transform_rate)
-
     def run_batch(self, h):
         if len(h) == 0:
             return
@@ -124,10 +120,15 @@ class runner(object):
         states = [e.reset() for e in envs]
 
         while not coord.should_stop():
+            sync_follower = False
+
             actions, values = self.get_actions(states)
             new_states = []
             for e, s, a, v in zip(envs, states, actions, values):
                 sn, reward, done = e.step(s, a)
+
+                if e.total_steps % self.follower_update_steps == 0:
+                    sync_follower = True
 
                 if done or e.total_steps % self.update_reward_steps == 0:
                     e.last_value = v
@@ -147,6 +148,10 @@ class runner(object):
                 check_save()
 
             states = new_states
+
+            if sync_follower:
+                self.follower.import_params(self.network.export_params(), self.follower.transform_rate)
+
 
         coord.request_stop()
 

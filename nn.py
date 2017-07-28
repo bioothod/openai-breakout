@@ -310,6 +310,7 @@ class nn(object):
 
             d1[name(k)] = v * rate + var * (1. - rate)
 
+        print "{0}: imported params: {1}, total params: {2}".format(self.scope, len(d), len(d1))
         self.sess.run(self.assign_ops, feed_dict=d1)
 
     def update_reward(self, r):
