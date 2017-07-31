@@ -65,6 +65,7 @@ class nn(object):
 
         log_softmax = tf.nn.log_softmax(policy)
         self.add_summary(tf.summary.scalar("log_softmax", tf.reduce_mean(log_softmax)))
+        self.add_summary(tf.summary.scalar("policy_softmax", tf.reduce_mean(self.policy)))
 
         log_softmax_logexp = tf.log(tf.reduce_sum(tf.exp(policy)))
         self.add_summary(tf.summary.scalar("log_softmax_logexp_mean", tf.reduce_mean(log_softmax_logexp)))
