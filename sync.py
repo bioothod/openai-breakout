@@ -23,9 +23,10 @@ class sync(object):
         self.env_sets = [env.env_set(r, config) for r in range(nr_runners)]
 
         self.network = self.init_network('main', config)
-        self.follower = self.init_network('follower', config)
+        #self.follower = self.init_network('follower', config)
+        #self.follower.import_params(self.network.export_params(), 0)
+        self.follower = None
 
-        self.follower.import_params(self.network.export_params(), 0)
 
         self.saved_total_steps = 0
         self.saved_time = 0

@@ -43,7 +43,7 @@ class runner(object):
 
             return np.random.choice(len(p), p=p)
 
-        action_probs, values = self.follower.predict(input)
+        action_probs, values = self.network.predict(input)
         #actions = [random_choice(p) for p in action_probs]
         actions = [np.random.choice(len(p), p=p) for p in action_probs]
 
@@ -149,8 +149,8 @@ class runner(object):
 
             states = new_states
 
-            if sync_follower:
-                self.follower.import_params(self.network.export_params(), self.follower.transform_rate)
+            #if sync_follower:
+            #    self.follower.import_params(self.network.export_params(), self.follower.transform_rate)
 
 
         coord.request_stop()
