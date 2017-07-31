@@ -7,7 +7,7 @@ RMSPROP_MOMENTUM = 0.9             # Momentum in RMSProp.
 RMSPROP_EPSILON = 1.0              # Epsilon term for RMSProp.
 
 def get_param_name(s):
-    return s.split('/', 1)[1].split(':')[0]
+    return s.split('/', 1)[1].replace('/', 'X').split(':')[0]
 def get_scope_name(s):
     return s.split('/')[0].split(':')[0]
 def get_transform_placeholder_name(s):
@@ -122,17 +122,17 @@ class nn(object):
                 continue
 
             gname = get_param_name(grad.name)
-            #print "gradient %s -> %s" % (var, gname)
+            print "gradient %s -> %s" % (var, gname)
 
             # get all gradients
             ret_grads.append(grad)
             ret_names.append(gname)
 
             pl = tf.placeholder(tf.float32, shape=var.get_shape(), name=gname)
-            #clip = tf.clip_by_average_norm(pl, 0.01)
-            ret_apply.append((pl, var))
+            clip = tf.clip_by_average_norm(pl, 0.01)
+            ret_apply.append((clip, var))
 
-            ag = tf.summary.histogram('%s/%s/apply_%s'% (self.scope, prefix, gname), pl)
+            ag = tf.summary.histogram('%s/apply_%s'% (prefix, gname), clip)
             self.summary_apply_gradients.append(ag)
 
         return ret_grads, ret_names, ret_apply
@@ -222,8 +222,8 @@ class nn(object):
                 continue
 
             #value = np.sum(grad) / float(len(states))
-            value = grad / float(len(states))
-            #value = grad
+            #value = grad / float(len(states))
+            value = grad
 
             g = dret.get(gname)
             if g:
