@@ -25,7 +25,7 @@ class breakout(object):
         c.put('save_per_total_steps', 10000)
         c.put('save_per_minutes', 60)
 
-        self.ac = sync.sync(2, c)
+        self.ac = sync.sync(3, c)
 
     def start(self):
         self.ac.start()
