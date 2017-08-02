@@ -90,8 +90,8 @@ class runner(object):
             reward[idx] = r
             idx += 1
 
-        self.network.train_clipped(states, action, reward)
-        #self.network.train(states, action, reward)
+        #self.network.train_clipped(states, action, reward)
+        self.network.train(states, action, reward)
         #self.calc_grads(states, action, reward, True)
 
     def run_batch(self, h):
@@ -115,7 +115,7 @@ class runner(object):
         self.batch += h
         if len(self.batch) >= self.batch_size:
             self.run_batch(self.batch)
-            self.batch = []
+            self.batch = self.batch[self.batch_size/4:]
 
     def run(self, envs, coord, check_save):
         states = [e.reset() for e in envs]
