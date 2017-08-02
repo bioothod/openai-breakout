@@ -90,8 +90,9 @@ class runner(object):
             reward[idx] = r
             idx += 1
 
+        self.network.train_clipped(states, action, reward)
         #self.network.train(states, action, reward)
-        self.calc_grads(states, action, reward, True)
+        #self.calc_grads(states, action, reward, True)
 
     def run_batch(self, h):
         if len(h) == 0:

@@ -137,6 +137,11 @@ class nn(object):
 
         return ret_grads, ret_names, ret_apply
 
+    def setup_clipped_train(self, opt):
+        grads = opt.compute_gradients(self.losses)
+        clipped = [(tf.clip_by_value(grad, -0.01, 0.01), var) for grad, var in grads]
+        return opt.apply_gradients(clipped, global_step=self.global_step)
+
     def do_init(self, input_shape, output_size):
         self.learning_rate_start = 0.0003
         self.reg_beta_start = 0.01
@@ -176,6 +181,8 @@ class nn(object):
                 epsilon=RMSPROP_EPSILON, name='optimizer')
 
         self.train_step = opt.minimize(self.losses, global_step=self.global_step)
+
+        self.train_clipped_step = self.setup_clipped_train(opt)
 
         self.gradient_names_policy = []
         self.apply_grads_policy = []
@@ -279,6 +286,19 @@ class nn(object):
         self.train_num += 1
 
         ops = [self.summary_merged, self.train_step]
+        summary = self.sess.run(ops, feed_dict={
+                self.scope + '/x:0': states,
+                self.scope + '/action:0': action,
+                self.scope + '/reward:0': reward,
+
+                self.scope + '/reward_mean:0': self.reward_mean,
+            })
+        self.summary_writer.add_summary(summary[0], self.train_num)
+
+    def train_clipped(self, states, action, reward):
+        self.train_num += 1
+
+        ops = [self.summary_merged, self.train_clipped_step]
         summary = self.sess.run(ops, feed_dict={
                 self.scope + '/x:0': states,
                 self.scope + '/action:0': action,
