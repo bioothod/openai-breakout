@@ -42,30 +42,34 @@ class nn(object):
 
         c1 = tf.layers.conv2d(inputs=input_layer, filters=32, kernel_size=5, padding='same', activation=tf.nn.relu)
         p1 = tf.layers.max_pooling2d(inputs=c1, pool_size=2, strides=2, padding='same')
-        
+
         c2 = tf.layers.conv2d(inputs=p1, filters=32, kernel_size=5, padding='same', activation=tf.nn.relu)
         p2 = tf.layers.max_pooling2d(inputs=c2, pool_size=2, strides=2, padding='same')
-        
+
         c3 = tf.layers.conv2d(inputs=p2, filters=64, kernel_size=4, padding='same', activation=tf.nn.relu)
         p3 = tf.layers.max_pooling2d(inputs=c3, pool_size=2, strides=2, padding='same')
-        
+
         c4 = tf.layers.conv2d(inputs=p3, filters=64, kernel_size=3, padding='same', activation=tf.nn.relu)
         p4 = tf.layers.max_pooling2d(inputs=c4, pool_size=2, strides=2, padding='same')
 
         flat = tf.reshape(p4, [-1, np.prod(p4.get_shape().as_list()[1:])])
 
-        dense = tf.layers.dense(inputs=flat, units=512, activation=tf.nn.relu)
+        dense = tf.layers.dense(inputs=flat, units=512, activation=tf.nn.relu, use_bias=True)
 
-        policy = tf.layers.dense(inputs=dense, units=output_size)
+        policy = tf.layers.dense(inputs=dense, units=output_size, activation=tf.nn.relu, use_bias=True)
         self.policy = tf.nn.softmax(policy)
-        self.value = tf.layers.dense(inputs=dense, units=1)
+        self.value = tf.layers.dense(inputs=dense, units=1, use_bias=True)
 
         actions = tf.one_hot(action, output_size)
         actions = tf.squeeze(actions, 1)
 
+        for i in range(output_size):
+            x = tf.one_hot(i, output_size)
+            pi = policy * x
+            self.add_summary(tf.summary.scalar("policy_{0}".format(i), tf.reduce_sum(pi)))
+
         log_softmax = tf.nn.log_softmax(policy)
         self.add_summary(tf.summary.scalar("log_softmax", tf.reduce_mean(log_softmax)))
-        self.add_summary(tf.summary.scalar("policy_softmax", tf.reduce_mean(self.policy)))
 
         log_softmax_logexp = tf.log(tf.reduce_sum(tf.exp(policy)))
         self.add_summary(tf.summary.scalar("log_softmax_logexp_mean", tf.reduce_mean(log_softmax_logexp)))
