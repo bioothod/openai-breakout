@@ -115,7 +115,7 @@ class runner(object):
         self.batch += h
         if len(self.batch) >= self.batch_size:
             self.run_batch(self.batch)
-            self.batch = self.batch[self.batch_size/4:]
+            self.batch = []
 
     def run(self, envs, coord, check_save):
         states = [e.reset() for e in envs]
