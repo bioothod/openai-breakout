@@ -285,10 +285,11 @@ class nn(object):
         self.summary_writer.add_summary(apply_summary, self.train_num)
 
     def predict(self, states):
-        p = self.sess.run([self.policy, self.value], feed_dict={
+        p, v = self.sess.run([self.policy, self.value], feed_dict={
                 self.scope + '/x:0': states,
             })
-        return p
+        #print "p: {0}, v: {1}".format(p[0], v[0])
+        return p, v
 
     def train(self, states, action, reward):
         self.train_num += 1
