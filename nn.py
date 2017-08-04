@@ -147,7 +147,7 @@ class nn(object):
 
     def setup_clipped_train(self, opt):
         grads = opt.compute_gradients(self.losses)
-        clipped = [(tf.clip_by_value(grad, -0.01, 0.01), var) for grad, var in grads]
+        clipped = [(tf.clip_by_norm(grad, 0.5), var) for grad, var in grads]
         return opt.apply_gradients(clipped, global_step=self.global_step)
 
     def do_init(self, input_shape, output_size):
