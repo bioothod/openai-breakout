@@ -222,8 +222,8 @@ class nn(object):
                 intra_op_parallelism_threads = 8,
                 inter_op_parallelism_threads = 8,
             )
-        #self.sess = tf.Session(config=config)
-        self.sess = tf.Session()
+        self.sess = tf.Session(config=config)
+        #self.sess = tf.Session()
         self.summary_merged = tf.summary.merge(self.summary_all)
         self.summary_apply_gradients_merged = tf.summary.merge(self.summary_apply_gradients)
 
