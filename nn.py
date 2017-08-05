@@ -78,7 +78,7 @@ class nn(object):
         log_probability_per_action = tf.reduce_sum(log_softmax * actions, axis=-1, keep_dims=True)
         self.add_summary(tf.summary.scalar("log_probability_mean", tf.reduce_mean(log_probability_per_action)))
 
-        advantage = (reward - tf.stop_gradient(self.value))
+        advantage = tf.stop_gradient(reward - self.value)
         self.add_summary(tf.summary.scalar("advantage_mean", tf.reduce_mean(advantage)))
 
         self.cost_policy = -advantage * log_probability_per_action
@@ -86,7 +86,7 @@ class nn(object):
         self.add_summary(tf.summary.scalar("cost_policy_mean", tf.reduce_mean(self.cost_policy)))
 
 
-        self.cost_value = tf.reduce_mean(tf.square(self.value - reward), axis=-1, keep_dims=True)
+        self.cost_value = tf.reduce_mean(tf.square(reward - self.value), axis=-1, keep_dims=True)
         tf.losses.add_loss(self.cost_value)
         self.add_summary(tf.summary.scalar("cost_value_mean", tf.reduce_mean(self.cost_value)))
 
@@ -100,7 +100,7 @@ class nn(object):
 
         policy_l2_loss = tf.reduce_sum(tf.square(policy), axis=-1, keep_dims=True) / 2.0
         self.add_summary(tf.summary.scalar("policy_l2_loss", tf.reduce_mean(policy_l2_loss)))
-        tf.losses.add_loss(policy_l2_loss * self.reg_beta)
+        #tf.losses.add_loss(policy_l2_loss * self.reg_beta)
 
         self.add_summary(tf.summary.scalar("input_reward_mean", tf.reduce_mean(reward)))
         self.add_summary(tf.summary.scalar("value_mean", tf.reduce_mean(self.value)))
@@ -137,7 +137,7 @@ class nn(object):
             ret_names.append(gname)
 
             pl = tf.placeholder(tf.float32, shape=var.get_shape(), name=gname)
-            clip = tf.clip_by_average_norm(pl, 0.01)
+            clip = tf.clip_by_average_norm(pl, 0.5)
             ret_apply.append((clip, var))
 
             ag = tf.summary.histogram('%s/apply_%s'% (prefix, gname), clip)
@@ -147,7 +147,7 @@ class nn(object):
 
     def setup_clipped_train(self, opt):
         grads = opt.compute_gradients(self.losses)
-        clipped = [(tf.clip_by_norm(grad, 0.5), var) for grad, var in grads]
+        clipped = [(tf.clip_by_average_norm(grad, 0.5), var) for grad, var in grads]
         return opt.apply_gradients(clipped, global_step=self.global_step)
 
     def do_init(self, input_shape, output_size):
@@ -167,7 +167,7 @@ class nn(object):
         self.learning_rate = 0.00025
         self.reg_beta = 0.01
         self.transform_rate = 0.9
-        self.learning_rate = tf.train.polinomial_decay(self.learning_rate_start, self.global_step, 100000, self.learning_rate_end)
+        self.learning_rate = tf.train.polynomial_decay(self.learning_rate_start, self.global_step, 100000, self.learning_rate_end)
         #self.reg_beta = 0.0001 + tf.train.exponential_decay(self.reg_beta_start, self.global_step, 100000, 1.5, staircase=True)
 
         self.add_summary(tf.summary.scalar('reg_beta', self.reg_beta))
