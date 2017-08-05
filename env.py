@@ -1,7 +1,6 @@
 import numpy as np
 
 from copy import deepcopy
-from collections import deque
 
 import cv2
 import gym
@@ -24,9 +23,6 @@ class env_holder(object):
 
         self.last_value = 0.0
         self.creward = 0
-
-        self.last_rewards = deque()
-        self.last_rewards_size = 100
 
         self.episodes = 0
         self.total_steps = 0
@@ -57,16 +53,6 @@ class env_holder(object):
         self.total_steps += 1
 
         if done:
-            if len(self.last_rewards) >= self.last_rewards_size:
-                self.last_rewards.popleft()
-
-            self.last_rewards.append(self.creward)
-            mean = np.mean(self.last_rewards)
-            std = np.std(self.last_rewards)
-
-            print "%s: %4d: reward: %4d, total steps: %7d, mean reward over last %3d episodes: %.1f, std: %.1f" % (
-                    self.eid, self.episodes, self.creward, self.total_steps, len(self.last_rewards), mean, std)
-
             self.episodes += 1
 
         #print "%s: %4d: reward: %4d, total steps: %7d, action: %d" % (

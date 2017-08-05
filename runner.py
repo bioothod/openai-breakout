@@ -1,5 +1,7 @@
 import numpy as np
 
+from collections import deque
+
 import gradient
 
 class runner(object):
@@ -15,6 +17,11 @@ class runner(object):
 
         self.total_steps = 0
         self.total_actions = 0
+
+        self.last_rewards = deque()
+        self.last_rewards_size = 100
+
+        self.max_reward = 0
 
         self.ra_range_begin = config.get("ra_range_begin")
         self.ra_alpha_cap = config.get("ra_alpha_cap")
@@ -90,8 +97,8 @@ class runner(object):
             reward[idx] = r
             idx += 1
 
-        #self.network.train_clipped(states, action, reward)
-        self.network.train(states, action, reward)
+        self.network.train_clipped(states, action, reward)
+        #self.network.train(states, action, reward)
         #self.calc_grads(states, action, reward, True)
 
     def run_batch(self, h):
@@ -118,22 +125,24 @@ class runner(object):
             self.batch = []
 
     def run(self, envs, coord, check_save):
-        states = [e.reset() for e in envs]
-
+        states = []
+        running_envs = []
         while not coord.should_stop():
-            sync_follower = False
+            if len(running_envs) == 0:
+                running_envs = envs
+                states = [e.reset() for e in running_envs]
 
             actions, values = self.get_actions(states)
             new_states = []
-            for e, s, a, v in zip(envs, states, actions, values):
+            new_running_envs = []
+            for e, s, a, v in zip(running_envs, states, actions, values):
+                e.last_value = v
                 sn, reward, done = e.step(s, a)
 
                 if e.total_steps % self.follower_update_steps == 0:
                     sync_follower = True
 
                 if done or e.total_steps % self.update_reward_steps == 0:
-                    e.last_value = v
-
                     self.update_reward(e, done)
 
                     e.clear()
@@ -141,18 +150,32 @@ class runner(object):
                     if done:
                         self.network.update_reward(e.creward)
 
-                        e.clear_stats()
-                        sn = e.reset()
+                        if len(self.last_rewards) >= self.last_rewards_size:
+                            self.last_rewards.popleft()
 
-                new_states.append(sn)
+                        self.last_rewards.append(e.creward)
+
+                        mean = np.mean(self.last_rewards)
+                        std = np.std(self.last_rewards)
+                        max_last = np.max(self.last_rewards)
+
+                        if e.creward > self.max_reward:
+                            self.max_reward = e.creward
+
+                        print "%s: %4d: reward: %4d/%4d/%4d, total steps: %7d, mean reward over last %3d episodes: %.1f, std: %.1f" % (
+                                e.eid, e.episodes, e.creward, max_last, self.max_reward, e.total_steps, len(self.last_rewards), mean, std)
+
+
+                        e.clear_stats()
+
+                if not done:
+                    new_states.append(sn)
+                    new_running_envs.append(e)
 
                 check_save()
 
             states = new_states
-
-            #if sync_follower:
-            #    self.follower.import_params(self.network.export_params(), self.follower.transform_rate)
-
+            running_envs = new_running_envs
 
         coord.request_stop()
 
