@@ -151,7 +151,8 @@ class nn(object):
         return opt.apply_gradients(clipped, global_step=self.global_step)
 
     def do_init(self, input_shape, output_size):
-        self.learning_rate_start = 0.0003
+        self.learning_rate_start = 0.00025
+        self.learning_rate_end = 0.0001
         self.reg_beta_start = 0.01
         self.transform_rate_start = 1.0
 
@@ -163,10 +164,10 @@ class nn(object):
 
         self.global_step = tf.get_variable('global_step', [], initializer=tf.constant_initializer(0), trainable=False)
         #self.transform_lr = 0.00001 + tf.train.exponential_decay(self.transform_lr_start, self.global_step, 100000, 0.6, staircase=True)
-        #self.learning_rate = 0.0003 + tf.train.exponential_decay(self.learning_rate_start, self.global_step, 100000, 0.9, staircase=True)
-        self.learning_rate = 0.0005
+        self.learning_rate = 0.00025
         self.reg_beta = 0.01
         self.transform_rate = 0.9
+        self.learning_rate = tf.train.polinomial_decay(self.learning_rate_start, self.global_step, 100000, self.learning_rate_end)
         #self.reg_beta = 0.0001 + tf.train.exponential_decay(self.reg_beta_start, self.global_step, 100000, 1.5, staircase=True)
 
         self.add_summary(tf.summary.scalar('reg_beta', self.reg_beta))
