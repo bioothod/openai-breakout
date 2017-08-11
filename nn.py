@@ -50,9 +50,9 @@ class nn(object):
         p3 = tf.layers.max_pooling2d(inputs=c3, pool_size=2, strides=2, padding='same')
 
         c4 = tf.layers.conv2d(inputs=p3, filters=64, kernel_size=3, padding='same', activation=tf.nn.relu)
-        p4 = tf.layers.max_pooling2d(inputs=c4, pool_size=2, strides=2, padding='same')
+        #p4 = tf.layers.max_pooling2d(inputs=c4, pool_size=2, strides=2, padding='same')
 
-        flat = tf.reshape(p4, [-1, np.prod(p4.get_shape().as_list()[1:])])
+        flat = tf.reshape(c4, [-1, np.prod(c4.get_shape().as_list()[1:])])
 
         dense = tf.layers.dense(inputs=flat, units=512, activation=tf.nn.relu, use_bias=True)
 
