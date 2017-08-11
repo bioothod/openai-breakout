@@ -142,33 +142,32 @@ class runner(object):
                 if e.total_steps % self.follower_update_steps == 0:
                     sync_follower = True
 
-                if done or e.total_steps % self.update_reward_steps == 0:
+                if e.total_steps % self.update_reward_steps == 0:
                     self.update_reward(e, done)
 
                     e.clear()
 
-                    if done:
-                        self.network.update_reward(e.creward)
+                if done:
+                    self.network.update_reward(e.creward)
 
-                        if len(self.last_rewards) >= self.last_rewards_size:
-                            self.last_rewards.popleft()
+                    if len(self.last_rewards) >= self.last_rewards_size:
+                        self.last_rewards.popleft()
 
-                        self.last_rewards.append(e.creward)
+                    self.last_rewards.append(e.creward)
 
-                        mean = np.mean(self.last_rewards)
-                        std = np.std(self.last_rewards)
-                        max_last = np.max(self.last_rewards)
+                    mean = np.mean(self.last_rewards)
+                    std = np.std(self.last_rewards)
+                    max_last = np.max(self.last_rewards)
 
-                        if e.creward > self.max_reward:
-                            self.max_reward = e.creward
+                    if e.creward > self.max_reward:
+                        self.max_reward = e.creward
 
-                        print "%s: %4d: reward: %4d/%4d/%4d, total steps: %7d, mean reward over last %3d episodes: %.1f, std: %.1f" % (
-                                e.eid, e.episodes, e.creward, max_last, self.max_reward, e.total_steps, len(self.last_rewards), mean, std)
+                    print "%s: %4d: reward: %4d/%4d/%4d, total steps: %7d, mean reward over last %3d episodes: %.1f, std: %.1f" % (
+                            e.eid, e.episodes, e.creward, max_last, self.max_reward, e.total_steps, len(self.last_rewards), mean, std)
 
 
-                        e.clear_stats()
-
-                if not done:
+                    e.clear_stats()
+                else:
                     new_states.append(sn)
                     new_running_envs.append(e)
 
