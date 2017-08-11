@@ -187,7 +187,9 @@ class nn(object):
         opt = tf.train.RMSPropOptimizer(self.learning_rate,
                 RMSPROP_DECAY,
                 momentum=RMSPROP_MOMENTUM,
-                epsilon=RMSPROP_EPSILON, name='optimizer')
+                epsilon=RMSPROP_EPSILON,
+                name='optimizer',
+                use_locking=True)
 
         self.train_step = opt.minimize(self.losses, global_step=self.global_step)
 
