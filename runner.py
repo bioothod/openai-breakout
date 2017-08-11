@@ -162,8 +162,10 @@ class runner(object):
                     if e.creward > self.max_reward:
                         self.max_reward = e.creward
 
-                    print "%s: %4d: reward: %4d/%4d/%4d, total steps: %7d, mean reward over last %3d episodes: %.1f, std: %.1f" % (
-                            e.eid, e.episodes, e.creward, max_last, self.max_reward, e.total_steps, len(self.last_rewards), mean, std)
+                    print "%s: %2d/%2d %4d: reward: %4d/%4d/%4d, total steps: %7d, mean reward over last %3d episodes: %.1f, std: %.1f" % (
+                            e.eid, len(running_envs), len(envs),
+                            e.episodes, e.creward, max_last, self.max_reward, e.total_steps,
+                            len(self.last_rewards), mean, std)
 
 
                     e.clear_stats()
