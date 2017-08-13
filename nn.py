@@ -18,6 +18,8 @@ class nn(object):
         self.reward_mean = 0.0
         self.reward_mean_alpha = 0.9
 
+        self.clip_value = 0.1
+
         print "going to initialize scope %s" % scope
         self.summary_writer = summary_writer
         self.scope = scope
@@ -54,11 +56,13 @@ class nn(object):
 
         flat = tf.reshape(c4, [-1, np.prod(c4.get_shape().as_list()[1:])])
 
-        dense = tf.layers.dense(inputs=flat, units=512, activation=tf.nn.relu, use_bias=True)
+        self.dense = tf.layers.dense(inputs=flat, units=512, activation=tf.nn.relu, use_bias=True, name='dense')
 
-        policy = tf.layers.dense(inputs=dense, units=output_size, activation=tf.nn.relu, use_bias=True)
+        policy = tf.layers.dense(inputs=self.dense, units=output_size, activation=tf.nn.relu, use_bias=True, name='policy')
         self.policy = tf.nn.softmax(policy)
-        self.value = tf.layers.dense(inputs=dense, units=1, use_bias=True)
+        self.value = tf.layers.dense(inputs=self.dense, units=1, use_bias=True, name='value')
+
+        self.clip_names = ['{0}/{1}'.format(self.scope, name) for name in ['dense', 'policy', 'value']]
 
         actions = tf.one_hot(action, output_size)
         actions = tf.squeeze(actions, 1)
@@ -145,9 +149,47 @@ class nn(object):
 
         return ret_grads, ret_names, ret_apply
 
+    def setup_gradient_stats(self, opt):
+        print self.dense
+        grads = opt.compute_gradients(self.losses)
+        dense_grad_vars = []
+        dense_grads = []
+        dense_name = '{0}/{1}/'.format(self.scope, 'dense')
+        reduced_max = []
+        reduced_mean = []
+        for grad, var in grads:
+            if dense_name in var.name:
+                print "{0} -> {1}".format(grad, var)
+                dense_grads.append(grad)
+                reduced_max.append(tf.reduce_max(grad))
+                reduced_mean.append(tf.reduce_mean(grad))
+
+        max_grad = tf.reduce_max(reduced_max)
+        self.add_summary(tf.summary.scalar("dense_max_grad", max_grad))
+
+        mean_grad = tf.reduce_mean(reduced_mean)
+        self.add_summary(tf.summary.scalar("dense_mean_grad", mean_grad))
+
+    def want_clip(self, name):
+        for n in self.clip_names:
+            if n in name:
+                return True
+
+        return False
+
     def setup_clipped_train(self, opt):
         grads = opt.compute_gradients(self.losses)
-        clipped = [(tf.clip_by_average_norm(grad, 0.5), var) for grad, var in grads]
+        clipped = []
+
+        for grad, var in grads:
+            p = (grad, var)
+
+            if self.want_clip(var.name):
+                p = (tf.clip_by_average_norm(grad, self.clip_value), var)
+                print "CLIP {0}: {1} -> {2}".format(self.clip_value, grad, var)
+
+            clipped.append(p)
+
         return opt.apply_gradients(clipped, global_step=self.global_step)
 
     def do_init(self, input_shape, output_size):
@@ -194,6 +236,7 @@ class nn(object):
         self.train_step = opt.minimize(self.losses, global_step=self.global_step)
 
         self.train_clipped_step = self.setup_clipped_train(opt)
+        self.setup_gradient_stats(opt)
 
         self.gradient_names_policy = []
         self.apply_grads_policy = []
