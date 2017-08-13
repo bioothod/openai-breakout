@@ -73,7 +73,7 @@ class nn(object):
             spi = tf.reduce_sum(pi, axis=-1)
             self.add_summary(tf.summary.scalar("policy_{0}".format(i), tf.reduce_mean(spi)))
 
-        log_softmax = tf.nn.log_softmax(policy)
+        log_softmax = tf.nn.log_softmax(policy + 1e-7)
         self.add_summary(tf.summary.scalar("log_softmax", tf.reduce_mean(log_softmax)))
 
         log_softmax_logexp = tf.log(tf.reduce_sum(tf.exp(policy)))
