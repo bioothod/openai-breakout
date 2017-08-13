@@ -65,7 +65,7 @@ class env_holder(object):
         self.last_value = 0.0
         self.prev_total_steps = self.total_steps
 
-    def total_steps_diff():
+    def total_steps_diff(self):
         return self.total_steps - self.prev_total_steps
 
     def clear(self):
