@@ -26,6 +26,7 @@ class env_holder(object):
 
         self.episodes = 0
         self.total_steps = 0
+        self.prev_total_steps = 0
 
     def new_state(self, obs):
         state = obs[35:195]
@@ -62,6 +63,10 @@ class env_holder(object):
     def clear_stats(self):
         self.creward = 0
         self.last_value = 0.0
+        self.prev_total_steps = self.total_steps
+
+    def total_steps_diff():
+        return self.total_steps - self.prev_total_steps
 
     def clear(self):
         self.history.clear()
