@@ -194,7 +194,7 @@ class nn(object):
 
     def do_init(self, input_shape, output_size):
         self.learning_rate_start = 0.00025
-        self.learning_rate_end = 0.0001
+        self.learning_rate_end = 0.00005
         self.reg_beta_start = 0.01
         self.transform_rate_start = 1.0
 
@@ -209,7 +209,7 @@ class nn(object):
         self.learning_rate = 0.00025
         self.reg_beta = 0.01
         self.transform_rate = 0.9
-        self.learning_rate = tf.train.polynomial_decay(self.learning_rate_start, self.global_step, 100000, self.learning_rate_end)
+        self.learning_rate = tf.train.polynomial_decay(self.learning_rate_start, self.global_step, 400000, self.learning_rate_end)
         #self.reg_beta = 0.0001 + tf.train.exponential_decay(self.reg_beta_start, self.global_step, 100000, 1.5, staircase=True)
 
         self.add_summary(tf.summary.scalar('reg_beta', self.reg_beta))
