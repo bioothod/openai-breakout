@@ -18,7 +18,7 @@ class nn(object):
         self.reward_mean = 0.0
         self.reward_mean_alpha = 0.9
 
-        self.clip_value = 0.1
+        self.clip_value = 5.
 
         print "going to initialize scope %s" % scope
         self.summary_writer = summary_writer
