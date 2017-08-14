@@ -56,13 +56,13 @@ class nn(object):
 
         flat = tf.reshape(c4, [-1, np.prod(c4.get_shape().as_list()[1:])])
 
-        self.dense = tf.layers.dense(inputs=flat, units=512, activation=tf.nn.relu, use_bias=True, name='dense')
+        self.dense = tf.layers.dense(inputs=flat, units=512, activation=tf.nn.relu, use_bias=True, name='dense_layer')
 
-        policy = tf.layers.dense(inputs=self.dense, units=output_size, activation=tf.nn.relu, use_bias=True, name='policy')
+        policy = tf.layers.dense(inputs=self.dense, units=output_size, activation=tf.nn.relu, use_bias=True, name='policy_layer')
         self.policy = tf.nn.softmax(policy)
-        self.value = tf.layers.dense(inputs=self.dense, units=1, use_bias=True, name='value')
+        self.value = tf.layers.dense(inputs=self.dense, units=1, use_bias=True, name='value_layer')
 
-        self.clip_names = ['{0}/{1}'.format(self.scope, name) for name in ['dense', 'policy', 'value']]
+        self.clip_names = ['{0}/{1}'.format(self.scope, name) for name in ['dense_layer', 'policy_layer', 'value_layer']]
 
         actions = tf.one_hot(action, output_size)
         actions = tf.squeeze(actions, 1)
@@ -73,7 +73,7 @@ class nn(object):
             spi = tf.reduce_sum(pi, axis=-1)
             self.add_summary(tf.summary.scalar("policy_{0}".format(i), tf.reduce_mean(spi)))
 
-        log_softmax = tf.nn.log_softmax(policy + 1e-7)
+        log_softmax = tf.nn.log_softmax(policy + 1e-10)
         self.add_summary(tf.summary.scalar("log_softmax", tf.reduce_mean(log_softmax)))
 
         log_softmax_logexp = tf.log(tf.reduce_sum(tf.exp(policy)))
@@ -100,7 +100,7 @@ class nn(object):
 
         xentropy_loss = xentropy * self.reg_beta
         tf.losses.add_loss(xentropy_loss)
-        self.add_summary(tf.summary.scalar("xentropy_loss_mean", tf.reduce_mean(xentropy_loss)))
+        #self.add_summary(tf.summary.scalar("xentropy_loss_mean", tf.reduce_mean(xentropy_loss)))
 
         policy_l2_loss = tf.reduce_sum(tf.square(policy), axis=-1, keep_dims=True) / 2.0
         self.add_summary(tf.summary.scalar("policy_l2_loss", tf.reduce_mean(policy_l2_loss)))
@@ -156,16 +156,21 @@ class nn(object):
         dense_grads = []
         dense_name = '{0}/{1}/'.format(self.scope, 'dense')
         reduced_max = []
+        reduced_min = []
         reduced_mean = []
         for grad, var in grads:
             if dense_name in var.name:
                 print "{0} -> {1}".format(grad, var)
                 dense_grads.append(grad)
                 reduced_max.append(tf.reduce_max(grad))
+                reduced_min.append(tf.reduce_min(grad))
                 reduced_mean.append(tf.reduce_mean(grad))
 
         max_grad = tf.reduce_max(reduced_max)
         self.add_summary(tf.summary.scalar("dense_max_grad", max_grad))
+ 
+        min_grad = tf.reduce_min(reduced_min)
+        self.add_summary(tf.summary.scalar("dense_min_grad", min_grad))
 
         mean_grad = tf.reduce_mean(reduced_mean)
         self.add_summary(tf.summary.scalar("dense_mean_grad", mean_grad))
@@ -212,7 +217,7 @@ class nn(object):
         self.learning_rate = tf.train.polynomial_decay(self.learning_rate_start, self.global_step, 400000, self.learning_rate_end)
         #self.reg_beta = 0.0001 + tf.train.exponential_decay(self.reg_beta_start, self.global_step, 100000, 1.5, staircase=True)
 
-        self.add_summary(tf.summary.scalar('reg_beta', self.reg_beta))
+        #self.add_summary(tf.summary.scalar('reg_beta', self.reg_beta))
         #self.add_summary(tf.summary.scalar('transform_lr', self.transform_lr))
         self.add_summary(tf.summary.scalar('learning_rate', self.learning_rate))
 
