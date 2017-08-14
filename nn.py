@@ -78,8 +78,7 @@ class nn(object):
             x = tf.one_hot(i, output_size)
             pi = policy * x
             spi = tf.reduce_sum(pi, axis=-1)
-            self.add_summary(tf.summary.scalar("policy_{0}_mean".format(i), tf.reduce_mean(spi)))
-            self.add_summary(tf.summary.scalar("policy_{0}_max".format(i), tf.reduce_max(spi)))
+            self.add_summary(tf.summary.scalar("policy_{0}".format(i), tf.reduce_mean(spi)))
 
         log_softmax = tf.nn.log_softmax(policy + 1e-10)
         self.add_summary(tf.summary.scalar("log_softmax", tf.reduce_mean(log_softmax)))
