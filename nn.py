@@ -152,28 +152,26 @@ class nn(object):
     def setup_gradient_stats(self, opt):
         print self.dense
         grads = opt.compute_gradients(self.losses)
-        dense_grad_vars = []
-        dense_grads = []
-        dense_name = '{0}/{1}/'.format(self.scope, 'dense')
-        reduced_max = []
-        reduced_min = []
-        reduced_mean = []
-        for grad, var in grads:
-            if dense_name in var.name:
-                print "{0} -> {1}".format(grad, var)
-                dense_grads.append(grad)
-                reduced_max.append(tf.reduce_max(grad))
-                reduced_min.append(tf.reduce_min(grad))
-                reduced_mean.append(tf.reduce_mean(grad))
 
-        max_grad = tf.reduce_max(reduced_max)
-        self.add_summary(tf.summary.scalar("dense_max_grad", max_grad))
- 
-        min_grad = tf.reduce_min(reduced_min)
-        self.add_summary(tf.summary.scalar("dense_min_grad", min_grad))
+        for name in self.clip_names:
+            reduced_max = []
+            reduced_min = []
+            reduced_mean = []
+            for grad, var in grads:
+                if name in var.name:
+                    print "{0} -> {1}".format(grad, var)
+                    reduced_max.append(tf.reduce_max(grad))
+                    reduced_min.append(tf.reduce_min(grad))
+                    reduced_mean.append(tf.reduce_mean(grad))
 
-        mean_grad = tf.reduce_mean(reduced_mean)
-        self.add_summary(tf.summary.scalar("dense_mean_grad", mean_grad))
+            max_grad = tf.reduce_max(reduced_max)
+            self.add_summary(tf.summary.scalar("max_grad_" + name, max_grad))
+
+            min_grad = tf.reduce_min(reduced_min)
+            self.add_summary(tf.summary.scalar("min_grad_" + name, min_grad))
+
+            mean_grad = tf.reduce_mean(reduced_mean)
+            self.add_summary(tf.summary.scalar("mean_grad_" + name, mean_grad))
 
     def want_clip(self, name):
         for n in self.clip_names:
