@@ -56,18 +56,17 @@ class nn(object):
 
         flat = tf.reshape(c4, [-1, np.prod(c4.get_shape().as_list()[1:])])
 
+        init = tf.random_uniform_initializer(minval=-1., maxval=1.)
+
         self.dense = tf.layers.dense(inputs=flat, units=512, activation=tf.nn.relu, use_bias=True, name='dense_layer',
-                            kernel_initializer=tf.random_uniform_initializer,
-                            bias_initializer=tf.random_uniform_initializer)
+                            kernel_initializer=init, bias_initializer=init)
 
         policy = tf.layers.dense(inputs=self.dense, units=output_size, activation=tf.nn.relu, use_bias=True, name='policy_layer',
-                            kernel_initializer=tf.random_uniform_initializer,
-                            bias_initializer=tf.random_uniform_initializer)
+                            kernel_initializer=init, bias_initializer=init)
         self.policy = tf.nn.softmax(policy)
 
         self.value = tf.layers.dense(inputs=self.dense, units=1, use_bias=True, name='value_layer',
-                            kernel_initializer=tf.random_uniform_initializer,
-                            bias_initializer=tf.random_uniform_initializer)
+                            kernel_initializer=init, bias_initializer=init)
 
         self.clip_names = ['{0}/{1}'.format(self.scope, name) for name in ['dense_layer', 'policy_layer', 'value_layer']]
 
