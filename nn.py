@@ -14,11 +14,23 @@ def get_transform_placeholder_name(s):
     return get_param_name(s) + '_ext'
 
 class nn(object):
-    def __init__(self, scope, input_shape, output_size, summary_writer):
+    def __init__(self, scope, config, summary_writer):
         self.reward_mean = 0.0
-        self.reward_mean_alpha = 0.9
+        self.reward_mean_alpha = config.get('reward_mean_alpha', 0.9)
+        self.clip_value = config.get('clip_gradient_norm', 2.)
+        self.learning_rate_start = config.get('learning_rate_start', 0.00025)
+        self.learning_rate_end = config.get('learning_rate_end', 0.00001)
+        self.learning_rate_decay_steps = config.get('learning_rate_decay_steps', 600000)
+        self.learning_rate = config.get('learning_rate')
+        self.xentropy_reg_beta = config.get('xentropy_reg_beta')
 
-        self.clip_value = 5.
+        self.train_num = 0
+
+        state_steps = config.get("state_steps")
+        config_input_shape = config.get('input_shape')
+        input_shape = (config_input_shape[0], config_input_shape[1], config_input_shape[2] * state_steps)
+
+        output_size = config.get('output_size')
 
         print "going to initialize scope %s" % scope
         self.summary_writer = summary_writer
@@ -104,13 +116,13 @@ class nn(object):
         xentropy = tf.reduce_sum(self.policy * log_softmax, axis=-1, keep_dims=True)
         self.add_summary(tf.summary.scalar("xentropy_mean", tf.reduce_mean(xentropy)))
 
-        xentropy_loss = xentropy * self.reg_beta
+        xentropy_loss = xentropy * self.xentropy_reg_beta
         tf.losses.add_loss(xentropy_loss)
         #self.add_summary(tf.summary.scalar("xentropy_loss_mean", tf.reduce_mean(xentropy_loss)))
 
         policy_l2_loss = tf.reduce_sum(tf.square(policy), axis=-1, keep_dims=True) / 2.0
         self.add_summary(tf.summary.scalar("policy_l2_loss", tf.reduce_mean(policy_l2_loss)))
-        #tf.losses.add_loss(policy_l2_loss * self.reg_beta)
+        #tf.losses.add_loss(policy_l2_loss * self.policy_reg_beta)
 
         self.add_summary(tf.summary.scalar("input_reward_mean", tf.reduce_mean(reward)))
         self.add_summary(tf.summary.scalar("value_mean", tf.reduce_mean(self.value)))
@@ -204,33 +216,17 @@ class nn(object):
         return opt.apply_gradients(clipped, global_step=self.global_step)
 
     def do_init(self, input_shape, output_size):
-        self.learning_rate_start = 0.00025
-        self.learning_rate_end = 0.00005
-        self.reg_beta_start = 0.01
-        self.transform_rate_start = 1.0
-
-        self.train_num = 0
-
         self.summary_all = []
         self.episode_stats_update = []
         self.summary_apply_gradients = []
 
         self.global_step = tf.get_variable('global_step', [], initializer=tf.constant_initializer(0), trainable=False)
-        #self.transform_lr = 0.00001 + tf.train.exponential_decay(self.transform_lr_start, self.global_step, 100000, 0.6, staircase=True)
-        self.learning_rate = 0.00025
-        self.reg_beta = 0.01
-        self.transform_rate = 0.9
-        self.learning_rate = tf.train.polynomial_decay(self.learning_rate_start, self.global_step, 400000, self.learning_rate_end)
-        #self.reg_beta = 0.0001 + tf.train.exponential_decay(self.reg_beta_start, self.global_step, 100000, 1.5, staircase=True)
 
-        #self.add_summary(tf.summary.scalar('reg_beta', self.reg_beta))
-        #self.add_summary(tf.summary.scalar('transform_lr', self.transform_lr))
+        if not self.learning_rate:
+            self.learning_rate = tf.train.polynomial_decay(self.learning_rate_start, self.global_step,
+                self.learning_rate_decay_steps, self.learning_rate_end)
+
         self.add_summary(tf.summary.scalar('learning_rate', self.learning_rate))
-
-        #episodes_passed_p = tf.placeholder(tf.int32, [], name='episodes_passed')
-        #episode_reward_p = tf.placeholder(tf.float32, [], name='episode_reward')
-        #total_actions_p = tf.placeholder(tf.float32, [], name='total_actions')
-        #random_alpha_p = tf.placeholder(tf.float32, [], name='random_alpha')
 
         reward_mean_p = tf.placeholder(tf.float32, [], name='reward_mean')
         self.add_summary(tf.summary.scalar("reward_mean", reward_mean_p))

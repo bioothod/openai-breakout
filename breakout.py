@@ -1,20 +1,27 @@
+import argparse
 import time
 
 import sync
 import config
 
 class breakout(object):
-    def __init__(self):
+    def __init__(self, args):
         c = config.config()
         c.put('game', 'Breakout-v0')
         c.put('gradient_update_step', 40000)
         c.put('gamma', 0.99)
-        c.put('update_reward_steps', 10)
+        c.put('update_reward_steps', 5)
         c.put('batch_size', 128)
         c.put('input_shape', (80, 80, 1))
         c.put('state_steps', 2)
         c.put('history_size', 100)
-        c.put('env_num', 50)
+        c.put('env_num', args.env_num)
+
+        c.put('learning_rate_start', 25e-5)
+        c.put('learning_rate_end', 2.5e-5)
+        c.put('learning_rate_decay_steps', 600000)
+        if args.learning_rate:
+            c.put('learning_rate', args.learning_rate)
 
         c.put('follower_update_steps', 300)
 
@@ -25,11 +32,24 @@ class breakout(object):
         c.put('save_per_total_steps', 10000)
         c.put('save_per_minutes', 60)
 
-        self.ac = sync.sync(3, c)
+        c.put('reward_mean_alpha', 0.9)
+        c.put('clip_gradient_norm', 2.)
+        c.put('xentropy_reg_beta', 0.01)
+        #c.put('policy_reg_beta', 0.01)
+
+        c.put('thread_num', args.thread_num)
+
+        self.ac = sync.sync(c)
 
     def start(self):
         self.ac.start()
 
 if __name__ == '__main__':
-    game = breakout()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--learning_rate', type=float, help='Set learning rate to this fixed value')
+    parser.add_argument('--thread_num', type=int, default=3, help='Number of runner threads')
+    parser.add_argument('--env_num', type=int, default=65, help='Number of environments in each runner thread')
+    args=parser.parse_args()
+
+    game = breakout(args)
     game.start()

@@ -9,7 +9,7 @@ import nn
 import runner
 
 class sync(object):
-    def __init__(self, nr_runners, config):
+    def __init__(self, config):
         self.swriter = None
         self.save_per_total_steps = None
         self.save_per_minutes = None
@@ -20,10 +20,10 @@ class sync(object):
 
         self.coord = tf.train.Coordinator()
 
-        self.env_sets = [env.env_set(r, config) for r in range(nr_runners)]
+        self.env_sets = [env.env_set(r, config) for r in range(config.get('thread_num'))]
 
-        self.network = self.init_network('main', config)
-        #self.follower = self.init_network('follower', config)
+        self.network = nn.nn('main', config, self.swriter)
+        #self.follower = nn.nn('follower', config, self.swriter)
         #self.follower.import_params(self.network.export_params(), 0)
         self.follower = None
 
@@ -37,16 +37,7 @@ class sync(object):
             self.save_per_total_steps = config.get('save_per_total_steps', 10000)
             self.save_per_minutes = config.get('save_per_minutes')
 
-        self.runners = [runner.runner(self.network, self.follower, config) for r in range(nr_runners)]
-
-    def init_network(self, scope, config):
-        state_steps = config.get("state_steps")
-        config_input_shape = config.get("input_shape")
-
-        input_shape = (config_input_shape[0], config_input_shape[1], config_input_shape[2] * state_steps)
-        osize = config.get('output_size')
-
-        return nn.nn(scope, input_shape, osize, self.swriter)
+        self.runners = [runner.runner(self.network, self.follower, config) for r in range(config.get('thread_num'))]
 
     def start(self):
         threads = [threading.Thread(target=r.run, args=(es.envs, self.coord, self.check_save)) for r, es in zip(self.runners, self.env_sets)]
