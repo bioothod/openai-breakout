@@ -170,14 +170,16 @@ class nn(object):
                     reduced_min.append(tf.reduce_min(grad))
                     reduced_mean.append(tf.reduce_mean(grad))
 
+            n = name.split('/')[-1]
+
             max_grad = tf.reduce_max(reduced_max)
-            self.add_summary(tf.summary.scalar("max_grad_" + name, max_grad))
+            self.add_summary(tf.summary.scalar("{0}.grad_max".format(n), max_grad))
 
             min_grad = tf.reduce_min(reduced_min)
-            self.add_summary(tf.summary.scalar("min_grad_" + name, min_grad))
+            self.add_summary(tf.summary.scalar("{0}.grad_min".format(n), min_grad))
 
             mean_grad = tf.reduce_mean(reduced_mean)
-            self.add_summary(tf.summary.scalar("mean_grad_" + name, mean_grad))
+            self.add_summary(tf.summary.scalar("{0}.grad_mean".format(n), mean_grad))
 
     def want_clip(self, name):
         for n in self.clip_names:
