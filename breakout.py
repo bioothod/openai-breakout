@@ -29,7 +29,7 @@ class breakout(object):
         c.put('output_path', 'output/' + name)
 
         c.put('save_path', 'save/' + name)
-        c.put('save_per_total_steps', 10000)
+        c.put('save_per_total_steps', 100000)
         c.put('save_per_minutes', 60)
         if args.load:
             c.put('load_path', args.load)
