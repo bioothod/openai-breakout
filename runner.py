@@ -56,28 +56,6 @@ class runner(object):
 
         return actions, values
 
-    def calc_grads(self, states, action, reward, done):
-        grads = self.network.compute_gradients(states, action, reward)
-        if grads:
-            for k, v in grads.iteritems():
-                e = self.grads.get(k)
-                if e:
-                    e.update(v)
-                else:
-                    self.grads[k] = gradient.gradient(v)
-
-        self.total_steps += 1
-
-        if self.total_steps % self.gradient_update_step == 0 or done:
-            grads = {}
-            for n, g in self.grads.iteritems():
-                grads[n] = g.read()
-
-            self.network.apply_gradients(grads)
-
-            for n, g in self.grads.iteritems():
-                g.clear()
-
     def run_sample(self, batch):
         states_shape = (len(batch), self.input_shape[0], self.input_shape[1], self.input_shape[2] * self.state_steps)
         states = np.zeros(shape=states_shape)
@@ -99,7 +77,6 @@ class runner(object):
 
         self.network.train_clipped(states, action, reward)
         #self.network.train(states, action, reward)
-        #self.calc_grads(states, action, reward, True)
 
     def run_batch(self, h):
         if len(h) == 0:
@@ -172,7 +149,7 @@ class runner(object):
                     new_states.append(sn)
                     new_running_envs.append(e)
 
-                check_save()
+                check_save(e.total_steps)
 
             states = new_states
             running_envs = new_running_envs

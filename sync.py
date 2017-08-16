@@ -50,20 +50,20 @@ class sync(object):
             self.coord.request_stop()
             self.coord.join(threads)
 
-    def check_save(self):
+    def check_save(self, total_steps):
         if not self.save_path:
             return
 
-        #if self.save_per_total_steps:
-        #    if self.total_steps >= self.saved_total_steps + self.save_per_total_save:
-        #        self.network.save(self.save_path)
-        #        self.saved_time = time.time()
-        #        self.saved_total_steps = self.total_steps
-        #        return
+        if self.save_per_total_steps:
+            if total_steps >= self.saved_total_steps + self.save_per_total_save:
+                self.network.save(self.save_path)
+                self.saved_time = time.time()
+                self.saved_total_steps = total_steps
+                return
 
         if self.save_per_minutes:
             if time.time() > self.saved_time + self.save_per_minutes * 60:
                 self.network.save(self.save_path)
                 self.saved_time = time.time()
-                #self.saved_total_steps = self.total_steps
+                self.saved_total_steps = total_steps
                 return
