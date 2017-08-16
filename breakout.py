@@ -31,6 +31,8 @@ class breakout(object):
         c.put('save_path', 'save/' + name)
         c.put('save_per_total_steps', 10000)
         c.put('save_per_minutes', 60)
+        if args.load:
+            c.put('load_path', args.load)
 
         c.put('reward_mean_alpha', 0.9)
         c.put('clip_gradient_norm', 2.)
@@ -49,6 +51,7 @@ if __name__ == '__main__':
     parser.add_argument('--learning_rate', type=float, help='Set learning rate to this fixed value')
     parser.add_argument('--thread_num', type=int, default=3, help='Number of runner threads')
     parser.add_argument('--env_num', type=int, default=65, help='Number of environments in each runner thread')
+    parser.add_argument('--load', action='store', help='Load previously saved model')
     args=parser.parse_args()
 
     game = breakout(args)

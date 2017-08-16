@@ -41,6 +41,9 @@ class nn(object):
             print "scope %s has been initialized" % scope
         
         self.saver = tf.train.Saver()
+        load_path = config.get('load_path')
+        if load_path:
+            self.restore(load_path)
 
     def init_model(self, input_shape, output_size):
         print "init_model scope: %s" % (tf.get_variable_scope().name)
@@ -301,7 +304,9 @@ class nn(object):
     def save(self, path):
         if self.saver:
             self.saver.save(self.sess, path, global_step=self.global_step)
+            print "Network params have been saved to {0}".format(path)
 
     def restore(self, path):
         if self.saver:
             self.saver.restore(self.sess, path)
+            print "Network params have been loaded from {0}".format(path)
