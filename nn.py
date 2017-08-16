@@ -135,38 +135,6 @@ class nn(object):
     def add_summary(self, s):
         self.summary_all.append(s)
 
-    def setup_gradients(self, prefix, opt, cost):
-        grads = opt.compute_gradients(cost)
-        ret_grads = []
-        ret_names = []
-        ret_apply = []
-
-        for e in grads:
-            grad, var = e
-
-            if grad is None or var is None:
-                continue
-
-            #print "var: %s, gradient: %s" % (var, grad)
-            if self.scope != get_scope_name(var.name):
-                continue
-
-            gname = get_param_name(grad.name)
-            print "gradient %s -> %s" % (var, gname)
-
-            # get all gradients
-            ret_grads.append(grad)
-            ret_names.append(gname)
-
-            pl = tf.placeholder(tf.float32, shape=var.get_shape(), name=gname)
-            clip = tf.clip_by_average_norm(pl, 0.5)
-            ret_apply.append((clip, var))
-
-            ag = tf.summary.histogram('%s/apply_%s'% (prefix, gname), clip)
-            self.summary_apply_gradients.append(ag)
-
-        return ret_grads, ret_names, ret_apply
-
     def setup_gradient_stats(self, opt):
         print self.dense
         grads = opt.compute_gradients(self.losses)
@@ -177,7 +145,7 @@ class nn(object):
             reduced_mean = []
             for grad, var in grads:
                 if name in var.name:
-                    print "{0} -> {1}".format(grad, var)
+                    #print "{0} -> {1}".format(grad, var)
                     reduced_max.append(tf.reduce_max(grad))
                     reduced_min.append(tf.reduce_min(grad))
                     reduced_mean.append(tf.reduce_mean(grad))
@@ -245,20 +213,6 @@ class nn(object):
         self.train_clipped_step = self.setup_clipped_train(opt)
         self.setup_gradient_stats(opt)
 
-        self.gradient_names_policy = []
-        self.apply_grads_policy = []
-
-        self.gradient_names_value = []
-        self.apply_grads_value = []
-
-        self.compute_gradients_step_policy, self.gradient_names_policy, self.apply_grads_policy = self.setup_gradients("policy", opt, self.cost_policy)
-
-        self.compute_gradients_step_value, self.gradient_names_value, self.apply_grads_value = self.setup_gradients("value", opt, self.cost_value)
-
-        apply_gradients = self.apply_grads_policy + self.apply_grads_value
-
-        self.apply_gradients_step = opt.apply_gradients(apply_gradients, global_step=self.global_step)
-
         self.assign_ops = []
         self.transform_variables = []
         for v in tf.trainable_variables():
@@ -269,7 +223,7 @@ class nn(object):
             self.assign_ops.append(tf.assign(v, ev, validate_shape=False))
 
             self.transform_variables.append(v)
-            print "{0}: transform variable: {1}".format(self.scope, v)
+            #print "{0}: transform variable: {1}".format(self.scope, v)
 
         config=tf.ConfigProto(
                 intra_op_parallelism_threads = 8,
@@ -278,70 +232,15 @@ class nn(object):
         self.sess = tf.Session(config=config)
         #self.sess = tf.Session()
         self.summary_merged = tf.summary.merge(self.summary_all)
-        self.summary_apply_gradients_merged = tf.summary.merge(self.summary_apply_gradients)
 
         init = [tf.global_variables_initializer(), tf.local_variables_initializer()]
         self.sess.run(init)
 
 
-    def update_gradients(self, states, dret, names, grads):
-        for gname, grad in zip(names, grads):
-            if np.isnan(grad).any():
-                continue
-
-            #value = np.sum(grad) / float(len(states))
-            #value = grad / float(len(states))
-            value = grad
-
-            g = dret.get(gname)
-            if g:
-                g.update(value)
-            else:
-                dret[gname] = value
-            #print "computed gradients %s, shape: %s" % (gname, grad.shape)
-            #print grad
-
-    def compute_gradients(self, states, action, reward):
-        self.train_num += 1
-
-        ops = [self.summary_merged, self.compute_gradients_step_policy, self.compute_gradients_step_value]
-        summary, grads_policy, grads_value = self.sess.run(ops, feed_dict={
-                self.scope + '/x:0': states,
-                self.scope + '/action:0': action,
-                self.scope + '/reward:0': reward,
-
-                self.scope + '/reward_mean:0': self.reward_mean,
-            })
-        self.summary_writer.add_summary(summary, self.train_num)
-
-        dret = {}
-        self.update_gradients(states, dret, self.gradient_names_policy, grads_policy)
-        self.update_gradients(states, dret, self.gradient_names_value, grads_value)
-        return dret
-
-
-    def apply_gradients(self, grads):
-        if len(grads) == 0:
-            print "empty gradients to apply"
-            return
-
-        feed_dict = {}
-        #print "apply: %s" % grads
-        for n, g in grads.iteritems():
-            gname = self.scope + '/' + n + ':0'
-            #print "apply gradients to %s, shape: %s" % (gname, g.shape)
-            #print g
-            feed_dict[gname] = g
-
-        ops = [self.apply_gradients_step, self.summary_apply_gradients_merged]
-        grads, apply_summary = self.sess.run(ops, feed_dict=feed_dict)
-        self.summary_writer.add_summary(apply_summary, self.train_num)
-
     def predict(self, states):
         p, v = self.sess.run([self.policy, self.value], feed_dict={
                 self.scope + '/x:0': states,
             })
-        #print "p: {0}, v: {1}".format(p[0], v[0])
         return p, v
 
     def train(self, states, action, reward):
