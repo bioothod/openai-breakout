@@ -193,7 +193,7 @@ class nn(object):
 
         self.global_step = tf.get_variable('global_step', [], initializer=tf.constant_initializer(0), trainable=False)
 
-        if not self.learning_rate:
+        if self.learning_rate == 0:
             self.learning_rate = tf.train.polynomial_decay(self.learning_rate_start, self.global_step,
                 self.learning_rate_decay_steps, self.learning_rate_end)
 

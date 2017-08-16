@@ -17,11 +17,10 @@ class breakout(object):
         c.put('history_size', 100)
         c.put('env_num', args.env_num)
 
-        c.put('learning_rate_start', 25e-5)
+        c.put('learning_rate_start', 24e-5)
         c.put('learning_rate_end', 2.5e-5)
         c.put('learning_rate_decay_steps', 600000)
-        if args.learning_rate:
-            c.put('learning_rate', args.learning_rate)
+        c.put('learning_rate', args.learning_rate)
 
         c.put('follower_update_steps', 300)
 
@@ -48,7 +47,7 @@ class breakout(object):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--learning_rate', type=float, help='Set learning rate to this fixed value')
+    parser.add_argument('--learning_rate', type=float, default=0, help='Set learning rate to this fixed value')
     parser.add_argument('--thread_num', type=int, default=3, help='Number of runner threads')
     parser.add_argument('--env_num', type=int, default=65, help='Number of environments in each runner thread')
     parser.add_argument('--load', action='store', help='Load previously saved model')
