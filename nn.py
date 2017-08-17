@@ -16,6 +16,8 @@ def get_transform_placeholder_name(s):
 class nn(object):
     def __init__(self, scope, config, summary_writer):
         self.reward_mean = 0.0
+        self.train_num = 0
+
         self.reward_mean_alpha = config.get('reward_mean_alpha', 0.9)
         self.clip_value = config.get('clip_gradient_norm', 2.)
         self.learning_rate_start = config.get('learning_rate_start', 0.00025)
@@ -23,8 +25,6 @@ class nn(object):
         self.learning_rate_decay_steps = config.get('learning_rate_decay_steps', 600000)
         self.learning_rate = config.get('learning_rate')
         self.xentropy_reg_beta = config.get('xentropy_reg_beta')
-
-        self.train_num = 0
 
         state_steps = config.get("state_steps")
         config_input_shape = config.get('input_shape')
@@ -44,6 +44,9 @@ class nn(object):
         load_path = config.get('load_path')
         if load_path:
             self.restore(load_path)
+
+            if config.get('global_step_reset', False):
+                self.sess.run([tf.assign(self.global_step, 0)])
 
     def init_model(self, input_shape, output_size):
         print "init_model scope: %s" % (tf.get_variable_scope().name)

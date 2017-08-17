@@ -19,7 +19,7 @@ class breakout(object):
 
         c.put('learning_rate_start', 24e-5)
         c.put('learning_rate_end', 2.5e-5)
-        c.put('learning_rate_decay_steps', 600000)
+        c.put('learning_rate_decay_steps', 500000)
         c.put('learning_rate', args.learning_rate)
 
         c.put('follower_update_steps', 300)
@@ -32,6 +32,7 @@ class breakout(object):
         c.put('save_per_minutes', 60)
         if args.load:
             c.put('load_path', args.load)
+        c.put('global_step_reset', True)
 
         c.put('reward_mean_alpha', 0.9)
         c.put('clip_gradient_norm', 1.)
