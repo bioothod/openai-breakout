@@ -26,18 +26,12 @@ class nn(object):
         self.learning_rate = config.get('learning_rate')
         self.xentropy_reg_beta = config.get('xentropy_reg_beta')
 
-        state_steps = config.get("state_steps")
-        config_input_shape = config.get('input_shape')
-        input_shape = (config_input_shape[0], config_input_shape[1], config_input_shape[2] * state_steps)
-
-        output_size = config.get('output_size')
-
         print "going to initialize scope %s" % scope
         self.summary_writer = summary_writer
         self.scope = scope
         with tf.variable_scope(scope) as vscope:
             self.vscope = vscope
-            self.do_init(input_shape, output_size)
+            self.do_init(config)
             print "scope %s has been initialized" % scope
         
         self.saver = tf.train.Saver()
@@ -48,8 +42,16 @@ class nn(object):
             if config.get('global_step_reset', False):
                 self.sess.run([tf.assign(self.global_step, 0)])
 
-    def init_model(self, input_shape, output_size):
+    def init_model(self, config):
         print "init_model scope: %s" % (tf.get_variable_scope().name)
+
+        state_steps = config.get("state_steps")
+        config_input_shape = config.get('input_shape')
+        input_shape = (config_input_shape[0], config_input_shape[1], config_input_shape[2] * state_steps)
+
+        output_size = config.get('output_size')
+
+        dense_layer_units = config.get('dense_layer_units')
 
         x = tf.placeholder(tf.float32, [None, input_shape[0], input_shape[1], input_shape[2]], name='x')
         action = tf.placeholder(tf.int32, [None, 1], name='action')
@@ -76,7 +78,7 @@ class nn(object):
 
         init = tf.random_uniform_initializer(minval=-0.01, maxval=0.01)
 
-        self.dense = tf.layers.dense(inputs=flat, units=512, activation=tf.nn.relu, use_bias=True, name='dense_layer',
+        self.dense = tf.layers.dense(inputs=flat, units=dense_layer_units, activation=tf.nn.relu, use_bias=True, name='dense_layer',
                             kernel_initializer=init, bias_initializer=init)
 
         policy = tf.layers.dense(inputs=self.dense, units=output_size, activation=tf.nn.relu, use_bias=True, name='policy_layer',
@@ -189,7 +191,7 @@ class nn(object):
 
         return opt.apply_gradients(clipped, global_step=self.global_step)
 
-    def do_init(self, input_shape, output_size):
+    def do_init(self, config):
         self.summary_all = []
         self.episode_stats_update = []
         self.summary_apply_gradients = []
@@ -205,7 +207,7 @@ class nn(object):
         reward_mean_p = tf.placeholder(tf.float32, [], name='reward_mean')
         self.add_summary(tf.summary.scalar("reward_mean", reward_mean_p))
 
-        self.init_model(input_shape, output_size)
+        self.init_model(config)
 
         opt = tf.train.RMSPropOptimizer(self.learning_rate,
                 RMSPROP_DECAY,

@@ -39,6 +39,8 @@ class breakout(object):
         c.put('xentropy_reg_beta', 0.01)
         #c.put('policy_reg_beta', 0.01)
 
+        c.put('dense_layer_units', 512)
+
         c.put('thread_num', args.thread_num)
 
         self.ac = sync.sync(c)
