@@ -26,13 +26,13 @@ class nn(object):
         self.learning_rate = config.get('learning_rate')
         self.xentropy_reg_beta = config.get('xentropy_reg_beta')
 
-        print "going to initialize scope %s" % scope
+        print("going to initialize scope %s" % scope)
         self.summary_writer = summary_writer
         self.scope = scope
         with tf.variable_scope(scope) as vscope:
             self.vscope = vscope
             self.do_init(config)
-            print "scope %s has been initialized" % scope
+            print("scope %s has been initialized" % scope)
         
         self.saver = tf.train.Saver()
         load_path = config.get('load_path')
@@ -43,7 +43,7 @@ class nn(object):
                 self.sess.run([tf.assign(self.global_step, 0)])
 
     def init_model(self, config):
-        print "init_model scope: %s" % (tf.get_variable_scope().name)
+        print("init_model scope: %s" % (tf.get_variable_scope().name))
 
         state_steps = config.get("state_steps")
         config_input_shape = config.get('input_shape')
@@ -144,7 +144,7 @@ class nn(object):
         self.summary_all.append(s)
 
     def setup_gradient_stats(self, opt):
-        print self.dense
+        print(self.dense)
         grads = opt.compute_gradients(self.losses)
 
         for name in self.clip_names:
@@ -185,7 +185,7 @@ class nn(object):
 
             if self.want_clip(var.name):
                 p = (tf.clip_by_average_norm(grad, self.clip_value), var)
-                print "CLIP {0}: {1} -> {2}".format(self.clip_value, grad, var)
+                print("CLIP {0}: {1} -> {2}".format(self.clip_value, grad, var))
 
             clipped.append(p)
 
@@ -300,7 +300,7 @@ class nn(object):
 
             d1[name(k)] = v * rate + var * (1. - rate)
 
-        print "{0}: imported params: {1}, total params: {2}".format(self.scope, len(d), len(d1))
+        print("{0}: imported params: {1}, total params: {2}".format(self.scope, len(d), len(d1)))
         self.sess.run(self.assign_ops, feed_dict=d1)
 
     def update_reward(self, r):
@@ -309,9 +309,9 @@ class nn(object):
     def save(self, path):
         if self.saver:
             self.saver.save(self.sess, path, global_step=self.global_step)
-            print "Network params have been saved to {0}".format(path)
+            print("Network params have been saved to {0}".format(path))
 
     def restore(self, path):
         if self.saver:
             self.saver.restore(self.sess, path)
-            print "Network params have been loaded from {0}".format(path)
+            print("Network params have been loaded from {0}".format(path))
