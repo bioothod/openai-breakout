@@ -17,7 +17,7 @@ class state(object):
 
     def push_tensor(self, st):
         if self.shape != st.shape:
-            print "self.shape: %s, tensor.shape: %s" % (self.shape, st.shape)
+            print("self.shape: %s, tensor.shape: %s" % (self.shape, st.shape))
             assert self.shape == st.shape
 
         if len(self.steps) == self.size:
