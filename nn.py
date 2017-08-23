@@ -76,7 +76,7 @@ class nn(object):
 
         flat = tf.reshape(c4, [-1, np.prod(c4.get_shape().as_list()[1:])])
 
-        init = tf.random_uniform_initializer(minval=-0.01, maxval=0.01)
+        init = tf.random_normal_initializer(0, 0.1)
 
         self.dense = tf.layers.dense(inputs=flat, units=dense_layer_units, activation=tf.nn.relu, use_bias=True, name='dense_layer',
                             kernel_initializer=init, bias_initializer=init)
