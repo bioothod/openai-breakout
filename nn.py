@@ -83,7 +83,9 @@ class nn(object):
 
         policy = tf.layers.dense(inputs=self.dense, units=output_size, activation=tf.nn.relu, use_bias=True, name='policy_layer',
                             kernel_initializer=init, bias_initializer=init)
-        self.policy = tf.nn.softmax(policy)
+        spolicy = policy + tf.maximum(0., tf.random_normal([output_size], mean=0, stddev=policy/10.))
+
+        self.policy = tf.nn.softmax(spolicy)
 
         self.value = tf.layers.dense(inputs=self.dense, units=1, use_bias=True, name='value_layer',
                             kernel_initializer=init, bias_initializer=init)
@@ -99,10 +101,10 @@ class nn(object):
             spi = tf.reduce_sum(pi, axis=-1)
             self.add_summary(tf.summary.scalar("policy_{0}".format(i), tf.reduce_mean(spi)))
 
-        log_softmax = tf.nn.log_softmax(policy + 1e-10)
+        log_softmax = tf.nn.log_softmax(spolicy)
         self.add_summary(tf.summary.scalar("log_softmax", tf.reduce_mean(log_softmax)))
 
-        log_softmax_logexp = tf.log(tf.reduce_sum(tf.exp(policy)) + 1e-10)
+        log_softmax_logexp = tf.log(tf.reduce_sum(tf.exp(spolicy)))
         self.add_summary(tf.summary.scalar("log_softmax_logexp_mean", tf.reduce_mean(log_softmax_logexp)))
 
         log_probability_per_action = tf.reduce_sum(log_softmax * actions, axis=-1, keep_dims=True)
@@ -128,13 +130,12 @@ class nn(object):
         tf.losses.add_loss(xentropy_loss)
         #self.add_summary(tf.summary.scalar("xentropy_loss_mean", tf.reduce_mean(xentropy_loss)))
 
-        policy_l2_loss = tf.reduce_sum(tf.square(policy), axis=-1, keep_dims=True) / 2.0
+        policy_l2_loss = tf.reduce_sum(tf.square(spolicy), axis=-1, keep_dims=True) / 2.0
         self.add_summary(tf.summary.scalar("policy_l2_loss", tf.reduce_mean(policy_l2_loss)))
         #tf.losses.add_loss(policy_l2_loss * self.policy_reg_beta)
 
         self.add_summary(tf.summary.scalar("input_reward_mean", tf.reduce_mean(reward)))
         self.add_summary(tf.summary.scalar("value_mean", tf.reduce_mean(self.value)))
-        self.add_summary(tf.summary.scalar("policy_mean", tf.reduce_mean(policy)))
 
         self.losses = tf.losses.get_total_loss()
         self.add_summary(tf.summary.scalar("loss_mean", tf.reduce_mean(self.losses)))
