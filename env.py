@@ -81,7 +81,7 @@ class env_set(object):
 
         env_num = config.get('env_num')
 
-        print rid
+        print(rid)
         for i in range(env_num):
             eid = 'r%02d.%02d' % (rid, i)
 
