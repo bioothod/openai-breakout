@@ -138,6 +138,10 @@ class nn(object):
         self.add_summary(tf.summary.scalar("input_reward_mean", tf.reduce_mean(reward)))
         self.add_summary(tf.summary.scalar("value_mean", tf.reduce_mean(self.value)))
 
+        reg_loss = tf.add_n(tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES))
+        self.add_summary(tf.summary.scalar("reg_loss", reg_loss))
+        tf.losses.add_loss(reg_loss * 0.01)
+
         self.losses = tf.losses.get_total_loss()
         self.add_summary(tf.summary.scalar("loss_mean", tf.reduce_mean(self.losses)))
 
