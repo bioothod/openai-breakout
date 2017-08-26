@@ -145,11 +145,9 @@ class runner(object):
                             len(self.last_rewards), mean, std))
 
                     e.clear_stats()
-
-                    sn = e.reset()
-
-                new_states.append(sn)
-                new_running_envs.append(e)
+                else:
+                    new_states.append(sn)
+                    new_running_envs.append(e)
 
                 check_save(e.total_steps)
 
