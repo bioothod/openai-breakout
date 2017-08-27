@@ -25,6 +25,7 @@ class nn(object):
         self.learning_rate_decay_steps = config.get('learning_rate_decay_steps', 600000)
         self.learning_rate = config.get('learning_rate')
         self.xentropy_reg_beta = config.get('xentropy_reg_beta')
+        self.reg_loss_beta = config.get('reg_loss_beta')
 
         print("going to initialize scope %s" % scope)
         self.summary_writer = summary_writer
@@ -139,7 +140,7 @@ class nn(object):
 
         reg_loss = tf.add_n(tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES))
         self.add_summary(tf.summary.scalar("reg_loss", reg_loss))
-        tf.losses.add_loss(reg_loss * 0.01)
+        tf.losses.add_loss(reg_loss * self.reg_loss_beta)
 
         self.losses = tf.losses.get_total_loss()
         self.add_summary(tf.summary.scalar("loss_mean", tf.reduce_mean(self.losses)))
