@@ -83,8 +83,7 @@ class nn(object):
                             kernel_initializer=init, bias_initializer=init)
 
         policy = tf.layers.dense(inputs=self.dense, units=output_size, activation=tf.nn.relu, use_bias=True, name='policy_layer',
-                            kernel_initializer=init, bias_initializer=tf.constant_initializer(1.),
-                            kernel_regularizer=tf.nn.l2_loss)
+                            kernel_initializer=init, bias_initializer=init)
 
         self.policy = tf.nn.softmax(policy)
 
@@ -111,16 +110,16 @@ class nn(object):
         log_probability_per_action = tf.reduce_sum(log_softmax * actions, axis=-1, keep_dims=True)
         self.add_summary(tf.summary.scalar("log_probability_mean", tf.reduce_mean(log_probability_per_action)))
 
-        advantage = tf.stop_gradient(reward - self.value)
+        advantage = reward - tf.stop_gradient(self.value)
         self.add_summary(tf.summary.scalar("advantage_mean", tf.reduce_mean(advantage)))
 
         self.cost_policy = -advantage * log_probability_per_action
-        tf.losses.add_loss(tf.reduce_sum(self.cost_policy))
+        tf.losses.add_loss(self.cost_policy)
         self.add_summary(tf.summary.scalar("cost_policy_mean", tf.reduce_mean(self.cost_policy)))
 
 
         self.cost_value = tf.reduce_mean(tf.square(reward - self.value), axis=-1, keep_dims=True)
-        tf.losses.add_loss(tf.reduce_sum(self.cost_value))
+        tf.losses.add_loss(self.cost_value)
         self.add_summary(tf.summary.scalar("cost_value_mean", tf.reduce_mean(self.cost_value)))
 
 
@@ -128,7 +127,7 @@ class nn(object):
         self.add_summary(tf.summary.scalar("xentropy_mean", tf.reduce_mean(xentropy)))
 
         xentropy_loss = xentropy * self.xentropy_reg_beta
-        tf.losses.add_loss(tf.reduce_sum(xentropy_loss))
+        tf.losses.add_loss(xentropy_loss)
         #self.add_summary(tf.summary.scalar("xentropy_loss_mean", tf.reduce_mean(xentropy_loss)))
 
         policy_l2_loss = tf.reduce_sum(tf.square(policy), axis=-1, keep_dims=True) / 2.0
@@ -137,10 +136,6 @@ class nn(object):
 
         self.add_summary(tf.summary.scalar("input_reward_mean", tf.reduce_mean(reward)))
         self.add_summary(tf.summary.scalar("value_mean", tf.reduce_mean(self.value)))
-
-        reg_loss = tf.add_n(tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES))
-        self.add_summary(tf.summary.scalar("reg_loss", reg_loss))
-        tf.losses.add_loss(reg_loss * self.reg_loss_beta)
 
         self.losses = tf.losses.get_total_loss()
         self.add_summary(tf.summary.scalar("loss_mean", tf.reduce_mean(self.losses)))
