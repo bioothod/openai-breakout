@@ -25,7 +25,6 @@ class nn(object):
         self.learning_rate_decay_steps = config.get('learning_rate_decay_steps', 600000)
         self.learning_rate = config.get('learning_rate')
         self.xentropy_reg_beta = config.get('xentropy_reg_beta')
-        self.reg_loss_beta = config.get('reg_loss_beta')
 
         print("going to initialize scope %s" % scope)
         self.summary_writer = summary_writer
@@ -82,7 +81,7 @@ class nn(object):
         self.dense = tf.layers.dense(inputs=flat, units=dense_layer_units, activation=tf.nn.relu, use_bias=True, name='dense_layer',
                             kernel_initializer=init, bias_initializer=init)
 
-        policy = tf.layers.dense(inputs=self.dense, units=output_size, activation=tf.nn.relu, use_bias=True, name='policy_layer',
+        policy = tf.layers.dense(inputs=self.dense, units=output_size, use_bias=True, name='policy_layer',
                             kernel_initializer=init, bias_initializer=init)
 
         self.policy = tf.nn.softmax(policy)
