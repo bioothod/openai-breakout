@@ -6,3 +6,4 @@ grad.py
 *.pyc
 saves
 .idea
+*~
