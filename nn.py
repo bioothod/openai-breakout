@@ -14,20 +14,20 @@ def get_transform_placeholder_name(s):
     return get_param_name(s) + '_ext'
 
 class nn(object):
-    def __init__(self, scope, config, summary_writer):
+    def __init__(self, scope, config):
         self.reward_mean = 0.0
         self.train_num = 0
 
-        self.reward_mean_alpha = config.get('reward_mean_alpha', 0.9)
-        self.clip_value = config.get('clip_gradient_norm', 2.)
-        self.learning_rate_start = config.get('learning_rate_start', 0.00025)
-        self.learning_rate_end = config.get('learning_rate_end', 0.00001)
-        self.learning_rate_decay_steps = config.get('learning_rate_decay_steps', 600000)
+        self.reward_mean_alpha = config.get('reward_mean_alpha')
+        self.clip_value = config.get('clip_gradient_norm')
+        self.learning_rate_start = config.get('learning_rate_start')
+        self.learning_rate_end = config.get('learning_rate_end')
+        self.learning_rate_decay_steps = config.get('learning_rate_decay_steps')
         self.learning_rate = config.get('learning_rate')
         self.xentropy_reg_beta = config.get('xentropy_reg_beta')
 
         print("going to initialize scope %s" % scope)
-        self.summary_writer = summary_writer
+        self.summary_writer = config.get('summary_writer')
         self.scope = scope
         with tf.variable_scope(scope) as vscope:
             self.vscope = vscope
@@ -285,22 +285,20 @@ class nn(object):
             d[k] = v
         return d
 
-    def import_params(self, d, rate):
-        self.train_num += 1
-
+    def import_params(self, d, self_rate):
         def name(v):
             return self.scope + '/' + get_transform_placeholder_name(v.name) + ':0'
 
         d1 = {}
-        for k, v in d.iteritems():
-            d1[name(k)] = v
+        for k, ext_v in d.iteritems():
+            d1[name(k)] = ext_v
 
-        for k, v in self.export_params().iteritems():
-            var = d1.get(name(k), v)
+        for k, self_v in self.export_params().iteritems():
+            ext_var = d1.get(name(k), self_v)
 
-            d1[name(k)] = v * rate + var * (1. - rate)
+            d1[name(k)] = self_v * self_rate + ext_var * (1. - self_rate)
 
-        print("{0}: imported params: {1}, total params: {2}".format(self.scope, len(d), len(d1)))
+        #print("{0}: imported params: {1}, total params: {2}".format(self.scope, len(d), len(d1)))
         self.sess.run(self.assign_ops, feed_dict=d1)
 
     def update_reward(self, r):

@@ -10,23 +10,18 @@ import runner
 
 class sync(object):
     def __init__(self, config):
-        self.swriter = None
         self.save_per_total_steps = None
         self.save_per_minutes = None
 
         output_path = config.get("output_path")
         if output_path:
-            self.swriter = tf.summary.FileWriter(output_path)
+            config.put('summary_writer', tf.summary.FileWriter(output_path))
 
         self.coord = tf.train.Coordinator()
 
         self.env_sets = [env.env_set(r, config) for r in range(config.get('thread_num'))]
 
-        self.network = nn.nn('main', config, self.swriter)
-        #self.follower = nn.nn('follower', config, self.swriter)
-        #self.follower.import_params(self.network.export_params(), 0)
-        self.follower = None
-
+        self.master = nn.nn('master', config)
 
         self.saved_total_steps = 0
         self.saved_time = 0
@@ -37,7 +32,7 @@ class sync(object):
             self.save_per_total_steps = config.get('save_per_total_steps', 10000)
             self.save_per_minutes = config.get('save_per_minutes')
 
-        self.runners = [runner.runner(self.network, self.follower, config) for r in range(config.get('thread_num'))]
+        self.runners = [runner.runner(r, self.master, config) for r in range(config.get('thread_num'))]
 
     def start(self):
         threads = [threading.Thread(target=r.run, args=(es.envs, self.coord, self.check_save)) for r, es in zip(self.runners, self.env_sets)]

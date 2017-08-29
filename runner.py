@@ -5,7 +5,7 @@ from collections import deque
 import gradient
 
 class runner(object):
-    def __init__(self, network, follower, config):
+    def __init__(self, rid, master, config):
         self.config = config
 
         self.grads = {}
@@ -35,8 +35,9 @@ class runner(object):
 
         self.follower_update_steps = config.get('follower_update_steps')
 
-        self.network = network
-        self.follower = follower
+        self.master = master
+        self.network = nn.nn('r{%0}'.format(rid), config)
+        self.network.import_params(self.master.export_params(), 0)
 
     def get_actions(self, states):
         input = [s.read() for s in states]
@@ -77,6 +78,8 @@ class runner(object):
 
         self.network.train_clipped(states, action, reward)
         #self.network.train(states, action, reward)
+
+        self.master.import_params(self.network.export_params(), 0)
 
     def run_batch(self, h):
         if len(h) == 0:
@@ -126,6 +129,7 @@ class runner(object):
 
                 if done:
                     self.network.update_reward(e.creward)
+                    self.master.update_reward(e.creward)
 
                     if len(self.last_rewards) >= self.last_rewards_size:
                         self.last_rewards.popleft()
