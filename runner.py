@@ -119,7 +119,7 @@ class runner(object):
                 if e.total_steps % self.follower_update_steps == 0:
                     sync_follower = True
 
-                if e.total_steps % self.update_reward_steps == 0:
+                if e.total_steps % self.update_reward_steps == 0 or done:
                     self.update_reward(e, done)
 
                     e.clear()
