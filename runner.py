@@ -3,6 +3,7 @@ import numpy as np
 from collections import deque
 
 import gradient
+import nn
 
 class runner(object):
     def __init__(self, rid, master, config):
