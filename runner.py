@@ -37,7 +37,7 @@ class runner(object):
         self.follower_update_steps = config.get('follower_update_steps')
 
         self.master = master
-        self.network = nn.nn('r{%0}'.format(rid), config)
+        self.network = nn.nn('r{0}'.format(rid), config)
         self.network.import_params(self.master.export_params(), 0)
 
     def get_actions(self, states):
