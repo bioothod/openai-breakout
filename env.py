@@ -86,6 +86,5 @@ class env_set(object):
             eid = 'r%02d.%02d' % (rid, i)
 
             e = env_holder(eid, config)
-            config.put('output_size', e.osize)
 
             self.envs.append(e)

@@ -6,7 +6,7 @@ import gradient
 import nn
 
 class runner(object):
-    def __init__(self, rid, master, config):
+    def __init__(self, master, network, config):
         self.config = config
 
         self.grads = {}
@@ -37,8 +37,7 @@ class runner(object):
         self.follower_update_steps = config.get('follower_update_steps')
 
         self.master = master
-        self.network = nn.nn('r{0}'.format(rid), config)
-        self.network.import_params(self.master.export_params(), 0)
+        self.network = network
 
     def get_actions(self, states):
         input = [s.read() for s in states]
@@ -77,10 +76,8 @@ class runner(object):
             reward[idx] = r
             idx += 1
 
-        self.network.train_clipped(states, action, reward)
-        #self.network.train(states, action, reward)
-
-        self.master.import_params(self.network.export_params(), 0)
+        self.master.train(states, action, reward)
+        self.network.import_params(self.master.export_params(), 0)
 
     def run_batch(self, h):
         if len(h) == 0:

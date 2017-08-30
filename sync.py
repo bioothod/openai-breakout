@@ -19,9 +19,10 @@ class sync(object):
 
         self.coord = tf.train.Coordinator()
 
-        self.env_sets = [env.env_set(r, config) for r in range(config.get('thread_num'))]
+        self.env_sets = []
 
-        self.master = nn.nn('master', config)
+        dummy_env = env.env_holder('dummy', config)
+        config.put('output_size', dummy_env.osize)
 
         self.saved_total_steps = 0
         self.saved_time = 0
@@ -32,10 +33,24 @@ class sync(object):
             self.save_per_total_steps = config.get('save_per_total_steps', 10000)
             self.save_per_minutes = config.get('save_per_minutes')
 
-        self.runners = [runner.runner(r, self.master, config) for r in range(config.get('thread_num'))]
+        self.master = nn.nn('master', config)
+
+        networks = []
+
+        config.put('session', self.master.sess)
+
+        for r in range(config.get('thread_num')):
+            n = nn.nn('r{0}'.format(r), config)
+            n.import_params(self.master.export_params(), 0)
+            networks.append(n)
+
+            self.env_sets.append(env.env_set(r, config))
+
+        self.runners = [runner.runner(self.master, n, config) for n in networks]
 
     def start(self):
-        threads = [threading.Thread(target=r.run, args=(es.envs, self.coord, self.check_save)) for r, es in zip(self.runners, self.env_sets)]
+        threads = [threading.Thread(target=r.run, args=(es.envs, self.coord, self.check_save))
+                for r, es in zip(self.runners, self.env_sets)]
         for t in threads:
             t.start()
 
@@ -51,14 +66,14 @@ class sync(object):
 
         if self.save_per_total_steps:
             if total_steps >= self.saved_total_steps + self.save_per_total_steps:
-                self.master.save(self.save_path)
+                #self.master.save(self.save_path)
                 self.saved_time = time.time()
                 self.saved_total_steps = total_steps
                 return
 
         if self.save_per_minutes:
             if time.time() > self.saved_time + self.save_per_minutes * 60:
-                self.master.save(self.save_path)
+                #self.master.save(self.save_path)
                 self.saved_time = time.time()
                 self.saved_total_steps = total_steps
                 return

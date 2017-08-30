@@ -216,8 +216,6 @@ class nn(object):
                 name='optimizer',
                 use_locking=True)
 
-        self.train_step = opt.minimize(self.losses, global_step=self.global_step)
-
         self.train_clipped_step = self.setup_clipped_train(opt)
         self.setup_gradient_stats(opt)
 
@@ -233,12 +231,12 @@ class nn(object):
             self.transform_variables.append(v)
             #print "{0}: transform variable: {1}".format(self.scope, v)
 
-        config=tf.ConfigProto(
+        tf_config = tf.ConfigProto(
                 intra_op_parallelism_threads = 8,
                 inter_op_parallelism_threads = 8,
             )
-        self.sess = tf.Session(config=config)
-        #self.sess = tf.Session()
+        self.sess = config.get('session', tf.Session(config=tf_config))
+        #self.sess = tf.Session(config = tf_config)
         self.summary_merged = tf.summary.merge(self.summary_all)
 
         init = [tf.global_variables_initializer(), tf.local_variables_initializer()]
@@ -252,19 +250,6 @@ class nn(object):
         return p, v
 
     def train(self, states, action, reward):
-        self.train_num += 1
-
-        ops = [self.summary_merged, self.train_step]
-        summary = self.sess.run(ops, feed_dict={
-                self.scope + '/x:0': states,
-                self.scope + '/action:0': action,
-                self.scope + '/reward:0': reward,
-
-                self.scope + '/reward_mean:0': self.reward_mean,
-            })
-        self.summary_writer.add_summary(summary[0], self.train_num)
-
-    def train_clipped(self, states, action, reward):
         self.train_num += 1
 
         ops = [self.summary_merged, self.train_clipped_step]
@@ -281,7 +266,7 @@ class nn(object):
         res = self.sess.run(self.transform_variables)
         d = {}
         for k, v in zip(self.transform_variables, res):
-            #print "export: {0}: {1}".format(self.scope, k)
+            print "export: {0}: {1}".format(self.scope, k)
             d[k] = v
         return d
 
@@ -297,6 +282,7 @@ class nn(object):
             ext_var = d1.get(name(k), self_v)
 
             d1[name(k)] = self_v * self_rate + ext_var * (1. - self_rate)
+            print "import: scope: {0}, name: {1}".format(self.scope, name(k))
 
         #print("{0}: imported params: {1}, total params: {2}".format(self.scope, len(d), len(d1)))
         self.sess.run(self.assign_ops, feed_dict=d1)
