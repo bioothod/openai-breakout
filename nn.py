@@ -266,7 +266,7 @@ class nn(object):
         res = self.sess.run(self.transform_variables)
         d = {}
         for k, v in zip(self.transform_variables, res):
-            print "export: {0}: {1}".format(self.scope, k)
+            #print "export: {0}: {1}".format(self.scope, k)
             d[k] = v
         return d
 
