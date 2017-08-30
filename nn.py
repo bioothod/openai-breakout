@@ -282,7 +282,7 @@ class nn(object):
             ext_var = d1.get(name(k), self_v)
 
             d1[name(k)] = self_v * self_rate + ext_var * (1. - self_rate)
-            print "import: scope: {0}, name: {1}".format(self.scope, name(k))
+            #print "import: scope: {0}, name: {1}".format(self.scope, name(k))
 
         #print("{0}: imported params: {1}, total params: {2}".format(self.scope, len(d), len(d1)))
         self.sess.run(self.assign_ops, feed_dict=d1)
