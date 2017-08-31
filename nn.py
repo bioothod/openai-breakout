@@ -274,18 +274,21 @@ class nn(object):
         def name(v):
             return self.scope + '/' + get_transform_placeholder_name(v.name) + ':0'
 
-        d1 = {}
+        ext_d = {}
         for k, ext_v in d.iteritems():
-            d1[name(k)] = ext_v
+            ext_d[name(k)] = ext_v
 
+        import_d = {}
         for k, self_v in self.export_params().iteritems():
-            ext_var = d1.get(name(k), self_v)
+            tn = name(k)
 
-            d1[name(k)] = self_v * self_rate + ext_var * (1. - self_rate)
-            #print "import: scope: {0}, name: {1}".format(self.scope, name(k))
+            ext_var = ext_d.get(tn, self_v)
+
+            import_d[tn] = self_v * self_rate + ext_var * (1. - self_rate)
+            #print "import: scope: {0}, name: {1}".format(self.scope, tn)
 
         #print("{0}: imported params: {1}, total params: {2}".format(self.scope, len(d), len(d1)))
-        self.sess.run(self.assign_ops, feed_dict=d1)
+        self.sess.run(self.assign_ops, feed_dict=import_d)
 
     def update_reward(self, r):
         self.reward_mean = self.reward_mean_alpha * self.reward_mean + (1. - self.reward_mean_alpha) * r
