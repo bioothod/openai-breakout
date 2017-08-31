@@ -239,10 +239,6 @@ class nn(object):
         #self.sess = tf.Session(config = tf_config)
         self.summary_merged = tf.summary.merge(self.summary_all)
 
-        init = [tf.global_variables_initializer(), tf.local_variables_initializer()]
-        self.sess.run(init)
-
-
     def predict(self, states):
         p, v = self.sess.run([self.policy, self.value], feed_dict={
                 self.scope + '/x:0': states,
@@ -266,17 +262,20 @@ class nn(object):
         res = self.sess.run(self.transform_variables)
         d = {}
         for k, v in zip(self.transform_variables, res):
-            #print "export: {0}: {1}".format(self.scope, k)
-            d[k] = v
+            #print "export: scope: {0}, key: {1}".format(self.scope, k)
+            d[k.name] = v
         return d
 
     def import_params(self, d, self_rate):
-        def name(v):
-            return self.scope + '/' + get_transform_placeholder_name(v.name) + ':0'
+        def name(name):
+            return self.scope + '/' + get_transform_placeholder_name(name) + ':0'
 
         ext_d = {}
         for k, ext_v in d.iteritems():
             ext_d[name(k)] = ext_v
+
+            #if 'policy_layer/kernel' in k:
+            #    print "exported {0}: name: {1}, value: {2}".format(k, name(k), ext_v)
 
         import_d = {}
         for k, self_v in self.export_params().iteritems():
@@ -285,7 +284,10 @@ class nn(object):
             ext_var = ext_d.get(tn, self_v)
 
             import_d[tn] = self_v * self_rate + ext_var * (1. - self_rate)
-            #print "import: scope: {0}, name: {1}".format(self.scope, tn)
+
+            #if 'policy_layer/kernel' in k:
+            #    print "import: scope: {0}, name: {1}, self_rate: {2}, self_v: {3}, ext_var: {4}, saving: {5}".format(
+            #            self.scope, tn, self_rate, self_v, ext_var, import_d[tn])
 
         #print("{0}: imported params: {1}, total params: {2}".format(self.scope, len(d), len(d1)))
         self.sess.run(self.assign_ops, feed_dict=import_d)

@@ -35,22 +35,23 @@ class sync(object):
 
         self.master = nn.nn('master', config)
 
-        networks = []
+        self.runners = []
 
         config.put('session', self.master.sess)
 
         for r in range(config.get('thread_num')):
             n = nn.nn('r{0}'.format(r), config)
-            n.import_params(self.master.export_params(), 0)
-            networks.append(n)
+            e = env.env_set(r, config)
+            self.runners.append(runner.runner(self.master, n, e, config))
 
-            self.env_sets.append(env.env_set(r, config))
+        init = [tf.global_variables_initializer(), tf.local_variables_initializer()]
+        self.master.sess.run(init)
 
-        self.runners = [runner.runner(self.master, n, config) for n in networks]
+        for r in self.runners:
+            r.network.import_params(self.master.export_params(), 0)
 
     def start(self):
-        threads = [threading.Thread(target=r.run, args=(es.envs, self.coord, self.check_save))
-                for r, es in zip(self.runners, self.env_sets)]
+        threads = [threading.Thread(target=r.run, args=(self.coord, self.check_save)) for r in self.runners]
         for t in threads:
             t.start()
 
@@ -66,14 +67,14 @@ class sync(object):
 
         if self.save_per_total_steps:
             if total_steps >= self.saved_total_steps + self.save_per_total_steps:
-                #self.master.save(self.save_path)
+                self.master.save(self.save_path)
                 self.saved_time = time.time()
                 self.saved_total_steps = total_steps
                 return
 
         if self.save_per_minutes:
             if time.time() > self.saved_time + self.save_per_minutes * 60:
-                #self.master.save(self.save_path)
+                self.master.save(self.save_path)
                 self.saved_time = time.time()
                 self.saved_total_steps = total_steps
                 return

@@ -6,7 +6,7 @@ import gradient
 import nn
 
 class runner(object):
-    def __init__(self, master, network, config):
+    def __init__(self, master, network, env_set, config):
         self.config = config
 
         self.grads = {}
@@ -36,6 +36,7 @@ class runner(object):
 
         self.follower_update_steps = config.get('follower_update_steps')
 
+        self.envs = env_set.envs
         self.master = master
         self.network = network
 
@@ -102,12 +103,12 @@ class runner(object):
             self.run_batch(self.batch)
             self.batch = []
 
-    def run(self, envs, coord, check_save):
+    def run(self, coord, check_save):
         states = []
         running_envs = []
         while not coord.should_stop():
             if len(running_envs) == 0:
-                running_envs = envs
+                running_envs = self.envs
                 states = [e.reset() for e in running_envs]
 
             actions, values = self.get_actions(states)
@@ -142,7 +143,7 @@ class runner(object):
                         self.max_reward = e.creward
 
                     print("%s: %3d %2d/%d reward: %3d/%3d/%3d, total steps: %6d/%4d, mean reward over last %3d episodes: %.1f, std: %.1f" % (
-                            e.eid, e.episodes, len(running_envs), len(envs),
+                            e.eid, e.episodes, len(running_envs), len(self.envs),
                             e.creward, max_last, self.max_reward, e.total_steps, e.total_steps_diff(),
                             len(self.last_rewards), mean, std))
 
