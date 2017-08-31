@@ -24,6 +24,8 @@ class runner(object):
 
         self.max_reward = 0
 
+        self.import_self_weight = config.get('import_self_weight')
+
         self.ra_range_begin = config.get("ra_range_begin")
         self.ra_alpha_cap = config.get("ra_alpha_cap")
         self.ra_alpha = config.get("ra_alpha")
@@ -78,7 +80,7 @@ class runner(object):
             idx += 1
 
         self.master.train(states, action, reward)
-        self.network.import_params(self.master.export_params(), 0)
+        self.network.import_params(self.master.export_params(), self.import_self_weight)
 
     def run_batch(self, h):
         if len(h) == 0:

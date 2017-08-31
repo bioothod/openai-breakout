@@ -34,6 +34,8 @@ class breakout(object):
             c.put('load_path', args.load)
         c.put('global_step_reset', True)
 
+        c.put('import_self_weight', 0.1)
+
         c.put('reward_mean_alpha', 0.9)
         c.put('clip_gradient_norm', 1.)
         c.put('xentropy_reg_beta', 0.01)
