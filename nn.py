@@ -123,7 +123,7 @@ class nn(object):
 
         policy_l2_loss = tf.reduce_sum(tf.square(policy), axis=-1, keep_dims=True) / 2.0
         self.add_summary(tf.summary.scalar("policy_l2_loss", tf.reduce_mean(policy_l2_loss)))
-        #tf.losses.add_loss(policy_l2_loss * self.policy_reg_beta)
+        tf.losses.add_loss(policy_l2_loss * self.policy_reg_beta)
 
         self.add_summary(tf.summary.scalar("input_reward_mean", tf.reduce_mean(reward)))
         self.add_summary(tf.summary.scalar("value_mean", tf.reduce_mean(self.value)))

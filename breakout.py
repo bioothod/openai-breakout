@@ -39,7 +39,7 @@ class breakout(object):
         c.put('reward_mean_alpha', 0.9)
         c.put('clip_gradient_norm', 0.1)
         c.put('xentropy_reg_beta', 0.01)
-        #c.put('policy_reg_beta', 0.01)
+        c.put('policy_reg_beta', 0.001)
 
         c.put('dense_layer_units', 512)
 
