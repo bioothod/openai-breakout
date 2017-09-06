@@ -35,15 +35,6 @@ class sync(object):
 
         self.master = nn.nn('master', config)
 
-        self.saver = tf.train.Saver()
-        load_path = config.get('load_path')
-        if load_path:
-            self.restore(load_path)
-
-            if config.get('global_step_reset', False):
-                self.master.sess.run([tf.assign(self.master.global_step, 0)])
-
-
         self.runners = []
 
         config.put('session', self.master.sess)
@@ -55,6 +46,14 @@ class sync(object):
 
         init = [tf.global_variables_initializer(), tf.local_variables_initializer()]
         self.master.sess.run(init)
+
+        self.saver = tf.train.Saver()
+        load_path = config.get('load_path')
+        if load_path:
+            self.restore(load_path)
+
+            if config.get('global_step_reset', False):
+                self.master.sess.run([tf.assign(self.master.global_step, 0)])
 
         cmp_dict = {}
         for k, v in self.master.export_params().iteritems():
