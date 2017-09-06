@@ -30,6 +30,7 @@ class breakout(object):
         c.put('save_path', 'save/' + name)
         c.put('save_per_total_steps', 100000)
         c.put('save_per_minutes', 60)
+        c.put('save_max_to_keep', 5)
         if args.load:
             c.put('load_path', args.load)
         c.put('global_step_reset', True)

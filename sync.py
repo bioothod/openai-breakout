@@ -47,7 +47,7 @@ class sync(object):
         init = [tf.global_variables_initializer(), tf.local_variables_initializer()]
         self.master.sess.run(init)
 
-        self.saver = tf.train.Saver()
+        self.saver = tf.train.Saver(max_to_keep=config.get('save_max_to_keep', 5))
         load_path = config.get('load_path')
         if load_path:
             self.restore(load_path)
