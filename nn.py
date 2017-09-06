@@ -25,6 +25,7 @@ class nn(object):
         self.learning_rate_decay_steps = config.get('learning_rate_decay_steps')
         self.learning_rate = config.get('learning_rate')
         self.xentropy_reg_beta = config.get('xentropy_reg_beta')
+        self.policy_reg_beta = config.get('policy_reg_beta')
 
         print("going to initialize scope %s" % scope)
         self.summary_writer = config.get('summary_writer')
