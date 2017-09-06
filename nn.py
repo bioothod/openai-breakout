@@ -33,14 +33,6 @@ class nn(object):
             self.vscope = vscope
             self.do_init(config)
             print("scope %s has been initialized" % scope)
-        
-        self.saver = tf.train.Saver()
-        load_path = config.get('load_path')
-        if load_path:
-            self.restore(load_path)
-
-            if config.get('global_step_reset', False):
-                self.sess.run([tf.assign(self.global_step, 0)])
 
     def init_model(self, config):
         print("init_model scope: %s" % (tf.get_variable_scope().name))
@@ -294,13 +286,3 @@ class nn(object):
 
     def update_reward(self, r):
         self.reward_mean = self.reward_mean_alpha * self.reward_mean + (1. - self.reward_mean_alpha) * r
-
-    def save(self, path):
-        if self.saver:
-            self.saver.save(self.sess, path, global_step=self.global_step)
-            print("Network params have been saved to {0}".format(path))
-
-    def restore(self, path):
-        if self.saver:
-            self.saver.restore(self.sess, path)
-            print("Network params have been loaded from {0}".format(path))

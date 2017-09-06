@@ -35,6 +35,15 @@ class sync(object):
 
         self.master = nn.nn('master', config)
 
+        self.saver = tf.train.Saver()
+        load_path = config.get('load_path')
+        if load_path:
+            self.restore(load_path)
+
+            if config.get('global_step_reset', False):
+                self.master.sess.run([tf.assign(self.master.global_step, 0)])
+
+
         self.runners = []
 
         config.put('session', self.master.sess)
@@ -47,8 +56,14 @@ class sync(object):
         init = [tf.global_variables_initializer(), tf.local_variables_initializer()]
         self.master.sess.run(init)
 
+        cmp_dict = {}
+        for k, v in self.master.export_params().iteritems():
+            cmp_dict[nn.get_transform_placeholder_name(k)] = v
         for r in self.runners:
             r.network.import_params(self.master.export_params(), 0)
+            for k, v in r.network.export_params().iteritems():
+                master_v = cmp_dict[nn.get_transform_placeholder_name(k)]
+                assert((master_v == v).all())
 
     def start(self):
         threads = [threading.Thread(target=r.run, args=(self.coord, self.check_save)) for r in self.runners]
@@ -61,20 +76,30 @@ class sync(object):
             self.coord.request_stop()
             self.coord.join(threads)
 
+    def save(self):
+        if self.saver:
+            self.saver.save(self.master.sess, self.save_path, global_step=self.master.global_step)
+            print("Network params have been saved to {0}".format(self.save_path))
+
+    def restore(self, path):
+        if self.saver:
+            self.saver.restore(self.master.sess, path)
+            print("Network params have been loaded from {0}".format(path))
+
     def check_save(self, total_steps):
         if not self.save_path:
             return
 
         if self.save_per_total_steps:
             if total_steps >= self.saved_total_steps + self.save_per_total_steps:
-                self.master.save(self.save_path)
+                self.save()
                 self.saved_time = time.time()
                 self.saved_total_steps = total_steps
                 return
 
         if self.save_per_minutes:
             if time.time() > self.saved_time + self.save_per_minutes * 60:
-                self.master.save(self.save_path)
+                self.save()
                 self.saved_time = time.time()
                 self.saved_total_steps = total_steps
                 return
