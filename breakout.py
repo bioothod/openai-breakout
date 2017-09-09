@@ -8,7 +8,6 @@ class breakout(object):
     def __init__(self, args):
         c = config.config()
         c.put('game', 'Breakout-v0')
-        c.put('gradient_update_step', 40000)
         c.put('gamma', 0.99)
         c.put('update_reward_steps', 5)
         c.put('batch_size', 128)
@@ -16,9 +15,9 @@ class breakout(object):
         c.put('state_steps', 2)
         c.put('env_num', args.env_num)
 
-        c.put('learning_rate_start', 24e-5)
-        c.put('learning_rate_end', 2.5e-5)
-        c.put('learning_rate_decay_steps', 500000)
+        c.put('learning_rate_start', 5e-5)
+        c.put('learning_rate_end', 5e-6)
+        c.put('learning_rate_decay_steps', 900000)
         c.put('learning_rate', args.learning_rate)
 
         c.put('follower_update_steps', 300)
@@ -34,12 +33,12 @@ class breakout(object):
             c.put('load_path', args.load)
         c.put('global_step_reset', True)
 
-        c.put('import_self_weight', 0.1)
+        c.put('import_self_weight', 0.)
 
         c.put('reward_mean_alpha', 0.9)
-        c.put('clip_gradient_norm', 0.1)
+        c.put('clip_gradient_norm', 1.)
         c.put('xentropy_reg_beta', 0.01)
-        c.put('policy_reg_beta', 0.001)
+        c.put('policy_reg_beta', 0.)
 
         c.put('dense_layer_units', 512)
 

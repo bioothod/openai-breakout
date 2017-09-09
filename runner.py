@@ -10,7 +10,6 @@ class runner(object):
         self.config = config
 
         self.grads = {}
-        self.gradient_update_step = config.get("gradient_update_step")
 
         self.gamma = config.get("gamma")
 
@@ -35,8 +34,6 @@ class runner(object):
  
         self.state_steps = config.get("state_steps")
         self.input_shape = config.get("input_shape")
-
-        self.follower_update_steps = config.get('follower_update_steps')
 
         self.envs = env_set.envs
         self.master = master
@@ -119,9 +116,6 @@ class runner(object):
             for e, s, a, v in zip(running_envs, states, actions, values):
                 e.last_value = v
                 sn, reward, done = e.step(s, a)
-
-                if e.total_steps % self.follower_update_steps == 0:
-                    sync_follower = True
 
                 if e.total_steps % self.update_reward_steps == 0 or done:
                     self.update_reward(e, done)
