@@ -5,7 +5,6 @@ from copy import deepcopy
 import cv2
 import gym
 
-import history
 import state
 
 class env_holder(object):
@@ -19,7 +18,7 @@ class env_holder(object):
         self.state_steps = config.get("state_steps")
         self.current_state = state.state(self.input_shape, self.state_steps)
 
-        self.history = history.history(10000)
+        self.history = []
 
         self.last_value = 0.0
         self.creward = 0
@@ -70,10 +69,10 @@ class env_holder(object):
         return self.total_steps - self.prev_total_steps
 
     def clear(self):
-        self.history.clear()
+        self.history = []
 
     def last(self, batch_size):
-        return self.history.last(batch_size)
+        return self.history[-batch_size:]
 
 class env_set(object):
     def __init__(self, rid, config):

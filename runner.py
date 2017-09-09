@@ -94,7 +94,7 @@ class runner(object):
             rev = e.last_value
 
         h = []
-        for elm in reversed(e.history.history):
+        for elm in reversed(e.last(self.batch_size)):
             s, a, r, sn, done = elm
             rev = r + self.gamma * rev
 
