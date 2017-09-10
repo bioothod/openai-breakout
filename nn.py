@@ -55,23 +55,23 @@ class nn(object):
 
         input_layer = tf.reshape(x, [-1, input_shape[0], input_shape[1], input_shape[2]])
 
-        c1 = tf.layers.conv2d(inputs=input_layer, filters=32, kernel_size=5, padding='same', activation=tf.nn.relu)
+        c1 = tf.layers.conv2d(inputs=input_layer, filters=32, kernel_size=5, padding='same', activation=tf.contrib.keras.layers.PReLU(alpha_initializer=tf.constant_initializer(0.01)))
         p1 = tf.layers.max_pooling2d(inputs=c1, pool_size=2, strides=2, padding='same')
 
-        c2 = tf.layers.conv2d(inputs=p1, filters=32, kernel_size=5, padding='same', activation=tf.nn.relu)
+        c2 = tf.layers.conv2d(inputs=p1, filters=32, kernel_size=5, padding='same', activation=tf.contrib.keras.layers.PReLU(alpha_initializer=tf.constant_initializer(0.01)))
         p2 = tf.layers.max_pooling2d(inputs=c2, pool_size=2, strides=2, padding='same')
 
-        c3 = tf.layers.conv2d(inputs=p2, filters=64, kernel_size=4, padding='same', activation=tf.nn.relu)
+        c3 = tf.layers.conv2d(inputs=p2, filters=64, kernel_size=4, padding='same', activation=tf.contrib.keras.layers.PReLU(alpha_initializer=tf.constant_initializer(0.01)))
         p3 = tf.layers.max_pooling2d(inputs=c3, pool_size=2, strides=2, padding='same')
 
-        c4 = tf.layers.conv2d(inputs=p3, filters=64, kernel_size=3, padding='same', activation=tf.nn.relu)
+        c4 = tf.layers.conv2d(inputs=p3, filters=64, kernel_size=3, padding='same', activation=tf.contrib.keras.layers.PReLU(alpha_initializer=tf.constant_initializer(0.01)))
         #p4 = tf.layers.max_pooling2d(inputs=c4, pool_size=2, strides=2, padding='same')
 
         flat = tf.reshape(c4, [-1, np.prod(c4.get_shape().as_list()[1:])])
 
         init = tf.random_normal_initializer(0, 0.1)
 
-        self.dense = tf.layers.dense(inputs=flat, units=dense_layer_units, activation=tf.nn.relu, use_bias=True, name='dense_layer',
+        self.dense = tf.layers.dense(inputs=flat, units=dense_layer_units, activation=tf.contrib.keras.layers.PReLU(alpha_initializer=tf.constant_initializer(0.01)), use_bias=True, name='dense_layer',
                             kernel_initializer=init, bias_initializer=init)
 
         policy = tf.layers.dense(inputs=self.dense, units=output_size, use_bias=True, name='policy_layer',
