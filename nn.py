@@ -69,18 +69,15 @@ class nn(object):
 
         flat = tf.reshape(c4, [-1, np.prod(c4.get_shape().as_list()[1:])])
 
-        init = tf.random_normal_initializer(0, 0.1)
+        self.dense = tf.layers.dense(inputs=flat, units=dense_layer_units,
+                activation=tf.contrib.keras.layers.PReLU(alpha_initializer=tf.constant_initializer(0.01)),
+                use_bias=True, name='dense_layer')
 
-        self.dense = tf.layers.dense(inputs=flat, units=dense_layer_units, activation=tf.contrib.keras.layers.PReLU(alpha_initializer=tf.constant_initializer(0.01)), use_bias=True, name='dense_layer',
-                            kernel_initializer=init, bias_initializer=init)
-
-        policy = tf.layers.dense(inputs=self.dense, units=output_size, use_bias=True, name='policy_layer',
-                            kernel_initializer=init, bias_initializer=init)
+        policy = tf.layers.dense(inputs=self.dense, units=output_size, use_bias=True, name='policy_layer')
 
         self.policy = tf.nn.softmax(policy)
 
-        self.value = tf.layers.dense(inputs=self.dense, units=1, use_bias=True, name='value_layer',
-                            kernel_initializer=init, bias_initializer=init)
+        self.value = tf.layers.dense(inputs=self.dense, units=1, use_bias=True, name='value_layer')
 
         self.clip_names = ['{0}/{1}'.format(self.scope, name) for name in ['dense_layer', 'policy_layer', 'value_layer']]
 
