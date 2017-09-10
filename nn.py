@@ -177,7 +177,7 @@ class nn(object):
             p = (grad, var)
 
             if self.want_clip(var.name):
-                p = (tf.clip_by_average_norm(grad, self.clip_value), var)
+                p = (tf.clip_by_norm(grad, self.clip_value), var)
                 print("CLIP {0}: {1} -> {2}".format(self.clip_value, grad, var))
 
             clipped.append(p)
