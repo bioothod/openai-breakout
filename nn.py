@@ -69,15 +69,27 @@ class nn(object):
 
         flat = tf.reshape(c4, [-1, np.prod(c4.get_shape().as_list()[1:])])
 
+        def kinit(fan_in, fan_out):
+            x = np.sqrt(fan_in / 2.)
+            r = tf.random_normal_initializer(0, 1. / x)
+            return r
+
+
         self.dense = tf.layers.dense(inputs=flat, units=dense_layer_units,
                 activation=tf.contrib.keras.layers.PReLU(alpha_initializer=tf.constant_initializer(0.01)),
-                use_bias=True, name='dense_layer')
+                use_bias=True, name='dense_layer',
+                kernel_initializer=kinit(flat.get_shape().as_list()[1], dense_layer_units),
+                bias_initializer=tf.random_normal_initializer(0.1, 0.1))
 
-        policy = tf.layers.dense(inputs=self.dense, units=output_size, use_bias=True, name='policy_layer')
+        policy = tf.layers.dense(inputs=self.dense, units=output_size, use_bias=True, name='policy_layer',
+                kernel_initializer=kinit(self.dense.get_shape().as_list()[1], output_size),
+                bias_initializer=tf.random_normal_initializer(0.1, 0.1))
 
         self.policy = tf.nn.softmax(policy)
 
-        self.value = tf.layers.dense(inputs=self.dense, units=1, use_bias=True, name='value_layer')
+        self.value = tf.layers.dense(inputs=self.dense, units=1, use_bias=True, name='value_layer',
+                kernel_initializer=kinit(self.dense.get_shape().as_list()[1], 1),
+                bias_initializer=tf.random_normal_initializer(0.1, 0.1))
 
         self.clip_names = ['{0}/{1}'.format(self.scope, name) for name in ['dense_layer', 'policy_layer', 'value_layer']]
 
