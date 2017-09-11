@@ -69,7 +69,8 @@ class nn(object):
 
         flat = tf.reshape(c4, [-1, np.prod(c4.get_shape().as_list()[1:])])
 
-        kinit = tf.contrib.keras.initializers.VarianceScaling(scale=1.0, mode="fan_avg", distribution="normal")
+        #kinit = tf.contrib.keras.initializers.VarianceScaling(scale=1.0, mode="fan_avg", distribution="normal")
+        kinit = tf.contrib.layers.xavier_initializer()
 
         self.dense = tf.layers.dense(inputs=flat, units=dense_layer_units,
                 activation=tf.contrib.keras.layers.PReLU(alpha_initializer=tf.constant_initializer(0.01)),
