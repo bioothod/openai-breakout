@@ -34,11 +34,9 @@ class sync(object):
             self.save_per_minutes = config.get('save_per_minutes')
 
         self.master = nn.nn('master', config)
-
-        self.runners = []
-
         config.put('session', self.master.sess)
 
+        self.runners = []
         for r in range(config.get('thread_num')):
             n = nn.nn('r{0}'.format(r), config)
             e = env.env_set(r, config)
@@ -47,7 +45,9 @@ class sync(object):
         init = [tf.global_variables_initializer(), tf.local_variables_initializer()]
         self.master.sess.run(init)
 
-        self.saver = tf.train.Saver(max_to_keep=config.get('save_max_to_keep', 5))
+        save_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='master')
+
+        self.saver = tf.train.Saver(var_list=save_vars, max_to_keep=config.get('save_max_to_keep', 5))
         load_path = config.get('load_path')
         if load_path:
             self.restore(load_path)
