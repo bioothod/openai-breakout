@@ -2,10 +2,6 @@ import tensorflow as tf
 
 import numpy as np
 
-RMSPROP_DECAY = 0.9                # Decay term for RMSProp.
-RMSPROP_MOMENTUM = 0.9             # Momentum in RMSProp.
-RMSPROP_EPSILON = 1.0              # Epsilon term for RMSProp.
-
 def get_param_name(s):
     return s.split('/', 1)[1].replace('/', 'X').split(':')[0]
 def get_scope_name(s):
@@ -208,12 +204,7 @@ class nn(object):
 
         self.init_model(config)
 
-        opt = tf.train.RMSPropOptimizer(self.learning_rate,
-                RMSPROP_DECAY,
-                momentum=RMSPROP_MOMENTUM,
-                epsilon=RMSPROP_EPSILON,
-                name='optimizer',
-                use_locking=True)
+        opt = tf.train.AdamOptimizer(self.learning_rate, name='optimizer')
 
         self.train_clipped_step = self.setup_clipped_train(opt)
         self.setup_gradient_stats(opt)
