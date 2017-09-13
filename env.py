@@ -20,7 +20,6 @@ class env_holder(object):
 
         self.history = []
 
-        self.last_value = 0.0
         self.creward = 0
 
         self.episodes = 0

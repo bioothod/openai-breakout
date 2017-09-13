@@ -86,12 +86,16 @@ class runner(object):
         self.run_sample(h)
 
     def update_reward(self, e, done):
+        local_batch = e.last(self.batch_size)
+
         rev = 0.0
         if not done:
-            rev = e.last_value
+            s, a, r, sn, done = local_batch[-1]
+
+            _, rev = self.get_actions([sn])
 
         h = []
-        for elm in reversed(e.last(self.batch_size)):
+        for elm in reversed(local_batch):
             s, a, r, sn, done = elm
             rev = r + self.gamma * rev
 
@@ -114,7 +118,6 @@ class runner(object):
             new_states = []
             new_running_envs = []
             for e, s, a, v in zip(running_envs, states, actions, values):
-                e.last_value = v
                 sn, reward, done = e.step(s, a)
 
                 if e.total_steps % self.update_reward_steps == 0 or done:
