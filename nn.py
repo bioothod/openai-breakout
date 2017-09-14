@@ -141,6 +141,10 @@ class nn(object):
     def setup_gradient_stats(self, opt):
         print(self.dense)
         grads = opt.compute_gradients(self.losses)
+        gradients, variables = zip(*grads)
+        print(self.clip_value)
+        gradients, _ = tf.clip_by_global_norm(gradients, self.clip_value)
+        grads = zip(gradients, variables)
 
         for name in self.clip_names:
             reduced_max = []
@@ -172,19 +176,23 @@ class nn(object):
         return False
 
     def setup_clipped_train(self, opt):
-        grads = opt.compute_gradients(self.losses)
-        clipped = []
-
-        for grad, var in grads:
-            p = (grad, var)
-
-            if self.want_clip(var.name) and len(grad.shape) > 1:
-                p = (tf.clip_by_norm(grad, self.clip_value, axes=[1]), var)
-                print("CLIP {0}: {1} -> {2}".format(self.clip_value, grad, var))
-
-            clipped.append(p)
-
-        return opt.apply_gradients(clipped, global_step=self.global_step)
+        gradients, variables = zip(*opt.compute_gradients(self.losses))
+        gradients, _ = tf.clip_by_global_norm(gradients, self.clip_value)
+        return opt.apply_gradients(zip(gradients, variables))
+        #
+        # grads = opt.compute_gradients(self.losses)
+        # clipped = []
+        #
+        # for grad, var in grads:
+        #     p = (grad, var)
+        #
+        #     if self.want_clip(var.name) and len(grad.shape) > 1:
+        #         p = (tf.clip_by_norm(grad, self.clip_value, axes=[1]), var)
+        #         print("CLIP {0}: {1} -> {2}".format(self.clip_value, grad, var))
+        #
+        #     clipped.append(p)
+        #
+        # return opt.apply_gradients(clipped, global_step=self.global_step)
 
     def do_init(self, config):
         self.summary_all = []
