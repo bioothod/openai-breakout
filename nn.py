@@ -238,15 +238,20 @@ class nn(object):
     def train(self, states, action, reward):
         self.train_num += 1
 
-        ops = [self.summary_merged, self.train_clipped_step]
-        summary = self.sess.run(ops, feed_dict={
-                self.scope + '/x:0': states,
-                self.scope + '/action:0': action,
-                self.scope + '/reward:0': reward,
+        feed_dict = {
+            self.scope + '/x:0': states,
+            self.scope + '/action:0': action,
+            self.scope + '/reward:0': reward,
 
-                self.scope + '/reward_mean:0': self.reward_mean,
-            })
-        self.summary_writer.add_summary(summary[0], self.train_num)
+            self.scope + '/reward_mean:0': self.reward_mean,
+        }
+
+        if self.train_num % 100 == 0:
+            ops = [self.summary_merged, self.train_clipped_step]
+            summary = self.sess.run(ops, feed_dict)
+            self.summary_writer.add_summary(summary[0], self.train_num)
+        else:
+            self.sess.run(self.train_clipped_step, feed_dict)
 
     def export_params(self):
         res = self.sess.run(self.transform_variables)
