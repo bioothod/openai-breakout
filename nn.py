@@ -141,6 +141,10 @@ class nn(object):
     def setup_gradient_stats(self, opt):
         print(self.dense)
         grads = opt.compute_gradients(self.losses)
+        gradients, variables = zip(*grads)
+        print(self.clip_value)
+        gradients, _ = tf.clip_by_global_norm(gradients, self.clip_value)
+        grads = zip(gradients, variables)
 
         for name in self.clip_names:
             reduced_max = []
@@ -172,19 +176,23 @@ class nn(object):
         return False
 
     def setup_clipped_train(self, opt):
-        grads = opt.compute_gradients(self.losses)
-        clipped = []
-
-        for grad, var in grads:
-            p = (grad, var)
-
-            if self.want_clip(var.name) and len(grad.shape) > 1:
-                p = (tf.clip_by_norm(grad, self.clip_value, axes=[1]), var)
-                print("CLIP {0}: {1} -> {2}".format(self.clip_value, grad, var))
-
-            clipped.append(p)
-
-        return opt.apply_gradients(clipped, global_step=self.global_step)
+        gradients, variables = zip(*opt.compute_gradients(self.losses))
+        gradients, _ = tf.clip_by_global_norm(gradients, self.clip_value)
+        return opt.apply_gradients(zip(gradients, variables))
+        #
+        # grads = opt.compute_gradients(self.losses)
+        # clipped = []
+        #
+        # for grad, var in grads:
+        #     p = (grad, var)
+        #
+        #     if self.want_clip(var.name) and len(grad.shape) > 1:
+        #         p = (tf.clip_by_norm(grad, self.clip_value, axes=[1]), var)
+        #         print("CLIP {0}: {1} -> {2}".format(self.clip_value, grad, var))
+        #
+        #     clipped.append(p)
+        #
+        # return opt.apply_gradients(clipped, global_step=self.global_step)
 
     def do_init(self, config):
         self.summary_all = []
@@ -238,15 +246,20 @@ class nn(object):
     def train(self, states, action, reward):
         self.train_num += 1
 
-        ops = [self.summary_merged, self.train_clipped_step]
-        summary = self.sess.run(ops, feed_dict={
-                self.scope + '/x:0': states,
-                self.scope + '/action:0': action,
-                self.scope + '/reward:0': reward,
+        feed_dict = {
+            self.scope + '/x:0': states,
+            self.scope + '/action:0': action,
+            self.scope + '/reward:0': reward,
 
-                self.scope + '/reward_mean:0': self.reward_mean,
-            })
-        self.summary_writer.add_summary(summary[0], self.train_num)
+            self.scope + '/reward_mean:0': self.reward_mean,
+        }
+
+        if self.train_num % 100 == 0:
+            ops = [self.summary_merged, self.train_clipped_step]
+            summary = self.sess.run(ops, feed_dict)
+            self.summary_writer.add_summary(summary[0], self.train_num)
+        else:
+            self.sess.run(self.train_clipped_step, feed_dict)
 
     def export_params(self):
         res = self.sess.run(self.transform_variables)
