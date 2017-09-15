@@ -13,6 +13,7 @@ class breakout(object):
         c.put('batch_size', 128)
         c.put('input_shape', (80, 80, 1))
         c.put('state_steps', 2)
+        c.put('summary_flush_num', 100)
         c.put('env_num', args.env_num)
 
         c.put('learning_rate_start', 5e-5)

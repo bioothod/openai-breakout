@@ -22,6 +22,7 @@ class nn(object):
         self.learning_rate = config.get('learning_rate')
         self.xentropy_reg_beta = config.get('xentropy_reg_beta')
         self.policy_reg_beta = config.get('policy_reg_beta')
+        self.summary_flush_num = config.get('summary_flush_num')
 
         print("going to initialize scope %s" % scope)
         self.summary_writer = config.get('summary_writer')
@@ -139,10 +140,8 @@ class nn(object):
         self.summary_all.append(s)
 
     def setup_gradient_stats(self, opt):
-        print(self.dense)
         grads = opt.compute_gradients(self.losses)
         gradients, variables = zip(*grads)
-        print(self.clip_value)
         gradients, _ = tf.clip_by_global_norm(gradients, self.clip_value)
         grads = zip(gradients, variables)
 
@@ -179,20 +178,6 @@ class nn(object):
         gradients, variables = zip(*opt.compute_gradients(self.losses))
         gradients, _ = tf.clip_by_global_norm(gradients, self.clip_value)
         return opt.apply_gradients(zip(gradients, variables))
-        #
-        # grads = opt.compute_gradients(self.losses)
-        # clipped = []
-        #
-        # for grad, var in grads:
-        #     p = (grad, var)
-        #
-        #     if self.want_clip(var.name) and len(grad.shape) > 1:
-        #         p = (tf.clip_by_norm(grad, self.clip_value, axes=[1]), var)
-        #         print("CLIP {0}: {1} -> {2}".format(self.clip_value, grad, var))
-        #
-        #     clipped.append(p)
-        #
-        # return opt.apply_gradients(clipped, global_step=self.global_step)
 
     def do_init(self, config):
         self.summary_all = []
@@ -234,7 +219,6 @@ class nn(object):
                 inter_op_parallelism_threads = 8,
             )
         self.sess = config.get('session', tf.Session(config=tf_config))
-        #self.sess = tf.Session(config = tf_config)
         self.summary_merged = tf.summary.merge(self.summary_all)
 
     def predict(self, states):
@@ -254,7 +238,7 @@ class nn(object):
             self.scope + '/reward_mean:0': self.reward_mean,
         }
 
-        if self.train_num % 100 == 0:
+        if self.train_num % self.summary_flush_num == 0:
             ops = [self.summary_merged, self.train_clipped_step]
             summary = self.sess.run(ops, feed_dict)
             self.summary_writer.add_summary(summary[0], self.train_num)
