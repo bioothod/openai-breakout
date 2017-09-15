@@ -177,7 +177,7 @@ class nn(object):
     def setup_clipped_train(self, opt):
         gradients, variables = zip(*opt.compute_gradients(self.losses))
         gradients, _ = tf.clip_by_global_norm(gradients, self.clip_value)
-        return opt.apply_gradients(zip(gradients, variables))
+        return opt.apply_gradients(zip(gradients, variables), global_step=self.global_step)
 
     def do_init(self, config):
         self.summary_all = []
