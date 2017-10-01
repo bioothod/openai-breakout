@@ -10,7 +10,7 @@ class breakout(object):
     def __init__(self, args):
         c = config.config()
         c.put('device', args.device)
-        c.put('per_process_gpu_memory_fraction', 0.4)
+        c.put('per_process_gpu_memory_fraction', 1.)
 
         c.put('game', 'Breakout-v0')
         c.put('gamma', 0.99)
