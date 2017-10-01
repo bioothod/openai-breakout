@@ -44,6 +44,7 @@ class nn(object):
         tf_config = tf.ConfigProto(
                 intra_op_parallelism_threads = 8,
                 inter_op_parallelism_threads = 8,
+                allow_soft_placement=True,
                 gpu_options = gpu_config,
             )
         self.sess = config.get('session', tf.Session(config=tf_config))
