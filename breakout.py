@@ -9,6 +9,8 @@ import tensorflow as tf
 class breakout(object):
     def __init__(self, args):
         c = config.config()
+        c.put('per_process_gpu_memory_fraction', 0.4)
+
         c.put('game', 'Breakout-v0')
         c.put('gamma', 0.99)
         c.put('update_reward_steps', 5)

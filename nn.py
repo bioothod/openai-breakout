@@ -214,9 +214,15 @@ class nn(object):
             self.transform_variables.append(v)
             #print "{0}: transform variable: {1}".format(self.scope, v)
 
+        gpu_config = tf.GPUOptions(
+                per_process_gpu_memory_fraction = config.get('per_process_gpu_memory_fraction', 1.0)
+            )
+
         tf_config = tf.ConfigProto(
                 intra_op_parallelism_threads = 8,
                 inter_op_parallelism_threads = 8,
+                log_device_placement=True,
+                gpu_options = gpu_config,
             )
         self.sess = config.get('session', tf.Session(config=tf_config))
         self.summary_merged = tf.summary.merge(self.summary_all)
