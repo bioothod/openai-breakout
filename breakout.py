@@ -9,6 +9,7 @@ import tensorflow as tf
 class breakout(object):
     def __init__(self, args):
         c = config.config()
+        c.put('device', args.device)
         c.put('per_process_gpu_memory_fraction', 0.4)
 
         c.put('game', 'Breakout-v0')
@@ -63,6 +64,5 @@ if __name__ == '__main__':
     parser.add_argument('--device', action='store', default='/cpu:0', help='Use this device for processing')
     args=parser.parse_args()
 
-    with tf.device(args.device):
-        game = breakout(args)
-        game.start()
+    game = breakout(args)
+    game.start()

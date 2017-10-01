@@ -23,14 +23,30 @@ class nn(object):
         self.xentropy_reg_beta = config.get('xentropy_reg_beta')
         self.policy_reg_beta = config.get('policy_reg_beta')
         self.summary_flush_num = config.get('summary_flush_num')
+        self.device = config.get('device', '/cpu:0')
 
         print("going to initialize scope %s" % scope)
         self.summary_writer = config.get('summary_writer')
         self.scope = scope
         with tf.variable_scope(scope) as vscope:
             self.vscope = vscope
-            self.do_init(config)
+            with tf.device(self.device):
+                self.do_init(config)
+
+            self.session_init(config)
             print("scope %s has been initialized" % scope)
+
+    def session_init(self, config):
+        gpu_config = tf.GPUOptions(
+                per_process_gpu_memory_fraction = config.get('per_process_gpu_memory_fraction', 1.0)
+            )
+
+        tf_config = tf.ConfigProto(
+                intra_op_parallelism_threads = 8,
+                inter_op_parallelism_threads = 8,
+                gpu_options = gpu_config,
+            )
+        self.sess = config.get('session', tf.Session(config=tf_config))
 
     def init_model(self, config):
         print("init_model scope: %s" % (tf.get_variable_scope().name))
@@ -214,17 +230,6 @@ class nn(object):
             self.transform_variables.append(v)
             #print "{0}: transform variable: {1}".format(self.scope, v)
 
-        gpu_config = tf.GPUOptions(
-                per_process_gpu_memory_fraction = config.get('per_process_gpu_memory_fraction', 1.0)
-            )
-
-        tf_config = tf.ConfigProto(
-                intra_op_parallelism_threads = 8,
-                inter_op_parallelism_threads = 8,
-                log_device_placement=True,
-                gpu_options = gpu_config,
-            )
-        self.sess = config.get('session', tf.Session(config=tf_config))
         self.summary_merged = tf.summary.merge(self.summary_all)
 
     def predict(self, states):
