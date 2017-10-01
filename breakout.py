@@ -4,6 +4,8 @@ import time
 import sync
 import config
 
+import tensorflow as tf
+
 class breakout(object):
     def __init__(self, args):
         c = config.config()
@@ -56,7 +58,9 @@ if __name__ == '__main__':
     parser.add_argument('--thread_num', type=int, default=3, help='Number of runner threads')
     parser.add_argument('--env_num', type=int, default=65, help='Number of environments in each runner thread')
     parser.add_argument('--load', action='store', help='Load previously saved model')
+    parser.add_argument('--device', action='store', default='/cpu:0', help='Use this device for processing')
     args=parser.parse_args()
 
-    game = breakout(args)
-    game.start()
+    with tf.device(args.device):
+        game = breakout(args)
+        game.start()
