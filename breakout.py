@@ -64,5 +64,10 @@ if __name__ == '__main__':
     parser.add_argument('--device', action='store', default='/cpu:0', help='Use this device for processing')
     args=parser.parse_args()
 
+    if 'gpu' in args.device:
+        visible_devices = args.device.split(':')[1]
+        import os
+        os.environ["CUDA_VISIBLE_DEVICES"] = visible_devices
+
     game = breakout(args)
     game.start()
