@@ -13,6 +13,11 @@ class sync(object):
         self.save_per_total_steps = None
         self.save_per_minutes = None
 
+        self.thread_num = config.get('thread_num')
+        self.env_num = config.get('env_num')
+        self.lock = threading.Lock()
+        self.episode_rewards = []
+
         output_path = config.get("output_path")
         if output_path:
             config.put('summary_writer', tf.summary.FileWriter(output_path))
@@ -37,7 +42,7 @@ class sync(object):
         config.put('session', self.master.sess)
 
         self.runners = []
-        for r in range(config.get('thread_num')):
+        for r in range(self.thread_num):
             n = nn.nn('r{0}'.format(r), config)
             e = env.env_set(r, config)
             self.runners.append(runner.runner(self.master, n, e, config))
@@ -85,20 +90,22 @@ class sync(object):
             self.saver.restore(self.master.sess, path)
             print("Network params have been loaded from {0}".format(path))
 
-    def check_save(self, total_steps):
-        if not self.save_path:
-            return
+    def check_save(self, total_steps, episode_rewards):
+        self.lock.acquire()
+        try:
+            self.episode_rewards += episode_rewards
 
-        if self.save_per_total_steps:
-            if total_steps >= self.saved_total_steps + self.save_per_total_steps:
-                self.save()
-                self.saved_time = time.time()
-                self.saved_total_steps = total_steps
+            if len(self.episode_rewards) == self.thread_num * self.env_num:
+                self.master.update_rewards(self.episode_rewards)
+                self.episode_rewards = []
+
+            if not self.save_path:
                 return
 
-        if self.save_per_minutes:
-            if time.time() > self.saved_time + self.save_per_minutes * 60:
-                self.save()
-                self.saved_time = time.time()
-                self.saved_total_steps = total_steps
-                return
+            if self.save_per_total_steps or self.save_per_minutes:
+                if total_steps >= self.saved_total_steps + self.save_per_total_steps or time.time() > self.saved_time + self.save_per_minutes * 60:
+                    self.saved_time = time.time()
+                    self.saved_total_steps = total_steps
+                    self.save()
+        finally:
+            self.lock.release()

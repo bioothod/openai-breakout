@@ -109,10 +109,14 @@ class runner(object):
     def run(self, coord, check_save):
         states = []
         running_envs = []
+        episode_rewards = []
         while not coord.should_stop():
             if len(running_envs) == 0:
+                check_save(self.envs[0].total_steps, episode_rewards)
+
                 running_envs = self.envs
                 states = [e.reset() for e in running_envs]
+                episode_rewards = []
 
             actions, values = self.get_actions(states)
             new_states = []
@@ -126,32 +130,29 @@ class runner(object):
                     e.clear()
 
                 if done:
-                    self.network.update_reward(e.creward)
-                    self.master.update_reward(e.creward)
-
                     if len(self.last_rewards) >= self.last_rewards_size:
                         self.last_rewards.popleft()
 
                     self.last_rewards.append(e.creward)
 
                     mean = np.mean(self.last_rewards)
-                    std = np.std(self.last_rewards)
                     max_last = np.max(self.last_rewards)
 
                     if e.creward > self.max_reward:
                         self.max_reward = e.creward
 
-                    print("%s: %3d %2d/%d reward: %3d/%3d/%3d, total steps: %6d/%4d, mean reward over last %3d episodes: %.1f, std: %.1f" % (
+                    episode_rewards.append(e.creward)
+
+                    print("%s: %3d %2d/%d reward: %3d/%3d/%3d, total steps: %6d/%4d, mean reward over last %3d episodes: %.1f, per episode: %.1f, min/max: %d/%d" % (
                             e.eid, e.episodes, len(running_envs), len(self.envs),
                             e.creward, max_last, self.max_reward, e.total_steps, e.total_steps_diff(),
-                            len(self.last_rewards), mean, std))
+                            len(self.last_rewards), mean,
+                            np.mean(episode_rewards), np.min(episode_rewards), np.max(episode_rewards)))
 
                     e.clear_stats()
                 else:
                     new_states.append(sn)
                     new_running_envs.append(e)
-
-                check_save(e.total_steps)
 
             states = new_states
             running_envs = new_running_envs

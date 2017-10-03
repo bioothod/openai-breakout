@@ -11,10 +11,8 @@ def get_transform_placeholder_name(s):
 
 class nn(object):
     def __init__(self, scope, config):
-        self.reward_mean = 0.0
         self.train_num = 0
 
-        self.reward_mean_alpha = config.get('reward_mean_alpha')
         self.clip_value = config.get('clip_gradient_norm')
         self.learning_rate_start = config.get('learning_rate_start')
         self.learning_rate_end = config.get('learning_rate_end')
@@ -69,16 +67,16 @@ class nn(object):
 
         input_layer = tf.reshape(x, [-1, input_shape[0], input_shape[1], input_shape[2]])
 
-        c1 = tf.layers.conv2d(inputs=input_layer, filters=32, kernel_size=5, padding='same', activation=tf.contrib.keras.layers.PReLU(alpha_initializer=tf.constant_initializer(0.001)))
+        c1 = tf.layers.conv2d(inputs=input_layer, filters=32, kernel_size=5, padding='same', activation=tf.contrib.keras.layers.PReLU(alpha_initializer=tf.constant_initializer(0.0001)))
         p1 = tf.layers.max_pooling2d(inputs=c1, pool_size=2, strides=2, padding='same')
 
-        c2 = tf.layers.conv2d(inputs=p1, filters=32, kernel_size=5, padding='same', activation=tf.contrib.keras.layers.PReLU(alpha_initializer=tf.constant_initializer(0.001)))
+        c2 = tf.layers.conv2d(inputs=p1, filters=32, kernel_size=5, padding='same', activation=tf.contrib.keras.layers.PReLU(alpha_initializer=tf.constant_initializer(0.0001)))
         p2 = tf.layers.max_pooling2d(inputs=c2, pool_size=2, strides=2, padding='same')
 
-        c3 = tf.layers.conv2d(inputs=p2, filters=64, kernel_size=4, padding='same', activation=tf.contrib.keras.layers.PReLU(alpha_initializer=tf.constant_initializer(0.001)))
+        c3 = tf.layers.conv2d(inputs=p2, filters=64, kernel_size=4, padding='same', activation=tf.contrib.keras.layers.PReLU(alpha_initializer=tf.constant_initializer(0.0001)))
         p3 = tf.layers.max_pooling2d(inputs=c3, pool_size=2, strides=2, padding='same')
 
-        c4 = tf.layers.conv2d(inputs=p3, filters=64, kernel_size=3, padding='same', activation=tf.contrib.keras.layers.PReLU(alpha_initializer=tf.constant_initializer(0.001)))
+        c4 = tf.layers.conv2d(inputs=p3, filters=64, kernel_size=3, padding='same', activation=tf.contrib.keras.layers.PReLU(alpha_initializer=tf.constant_initializer(0.0001)))
         #p4 = tf.layers.max_pooling2d(inputs=c4, pool_size=2, strides=2, padding='same')
 
         flat = tf.reshape(c4, [-1, np.prod(c4.get_shape().as_list()[1:])])
@@ -87,7 +85,7 @@ class nn(object):
         kinit = tf.contrib.layers.xavier_initializer()
 
         self.dense = tf.layers.dense(inputs=flat, units=dense_layer_units,
-                activation=tf.contrib.keras.layers.PReLU(alpha_initializer=tf.constant_initializer(0.001)),
+                activation=tf.contrib.keras.layers.PReLU(alpha_initializer=tf.constant_initializer(0.0001)),
                 use_bias=True, name='dense_layer',
                 kernel_initializer=kinit,
                 bias_initializer=tf.random_normal_initializer(0, 0.1))
@@ -152,7 +150,6 @@ class nn(object):
         self.losses = tf.losses.get_total_loss()
         self.add_summary(tf.summary.scalar("loss_mean", tf.reduce_mean(self.losses)))
 
-
     def add_summary(self, s):
         self.summary_all.append(s)
 
@@ -209,8 +206,12 @@ class nn(object):
 
         self.add_summary(tf.summary.scalar('learning_rate', self.learning_rate))
 
-        reward_mean_p = tf.placeholder(tf.float32, [], name='reward_mean')
-        self.add_summary(tf.summary.scalar("reward_mean", reward_mean_p))
+        rewards = tf.placeholder(tf.float32, [None], name='episode_rewards')
+        rewards_summary = []
+        rewards_summary.append(tf.summary.scalar("episode_rewards_mean", tf.reduce_mean(rewards)))
+        rewards_summary.append(tf.summary.scalar("episode_rewards_max", tf.reduce_max(rewards)))
+        rewards_summary.append(tf.summary.scalar("episode_rewards_min", tf.reduce_min(rewards)))
+        self.update_rewards_ops = tf.summary.merge(rewards_summary)
 
         self.init_model(config)
 
@@ -241,19 +242,16 @@ class nn(object):
 
     def train(self, states, action, reward):
         self.train_num += 1
-
         feed_dict = {
             self.scope + '/x:0': states,
             self.scope + '/action:0': action,
             self.scope + '/reward:0': reward,
-
-            self.scope + '/reward_mean:0': self.reward_mean,
         }
 
         if self.train_num % self.summary_flush_num == 0:
-            ops = [self.summary_merged, self.train_clipped_step]
+            ops = [self.summary_merged, self.train_clipped_step, self.global_step]
             summary = self.sess.run(ops, feed_dict)
-            self.summary_writer.add_summary(summary[0], self.train_num)
+            self.summary_writer.add_summary(summary[0], summary[-1])
         else:
             self.sess.run(self.train_clipped_step, feed_dict)
 
@@ -291,5 +289,10 @@ class nn(object):
         #print("{0}: imported params: {1}, total params: {2}".format(self.scope, len(d), len(d1)))
         self.sess.run(self.assign_ops, feed_dict=import_d)
 
-    def update_reward(self, r):
-        self.reward_mean = self.reward_mean_alpha * self.reward_mean + (1. - self.reward_mean_alpha) * r
+    def update_rewards(self, rewards):
+        feed_dict = {
+            self.scope + '/episode_rewards:0': rewards,
+        }
+
+        s = self.sess.run([self.update_rewards_ops, self.global_step], feed_dict)
+        self.summary_writer.add_summary(s[0], s[1])
