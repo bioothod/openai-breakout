@@ -26,7 +26,7 @@ class env_holder(object):
         self.total_steps = 0
         self.prev_total_steps = 0
 
-    def new_state(self, obs):
+    def new_state(self, state):
         #state = obs[35:195]
         #state = state[::, ::, 0]
         state = 0.2126 * state[:, :, 0] + 0.7152 * state[:, :, 1] + 0.0722 * state[:, :, 2]
