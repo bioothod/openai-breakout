@@ -67,25 +67,19 @@ class nn(object):
 
         input_layer = tf.reshape(x, [-1, input_shape[0], input_shape[1], input_shape[2]])
 
-        c1 = tf.layers.conv2d(inputs=input_layer, filters=32, kernel_size=5, padding='same', activation=tf.contrib.keras.layers.PReLU(alpha_initializer=tf.constant_initializer(0.0001)))
-        p1 = tf.layers.max_pooling2d(inputs=c1, pool_size=2, strides=2, padding='same')
+        prelu_alpha = 0.0001
 
-        c2 = tf.layers.conv2d(inputs=p1, filters=32, kernel_size=5, padding='same', activation=tf.contrib.keras.layers.PReLU(alpha_initializer=tf.constant_initializer(0.0001)))
-        p2 = tf.layers.max_pooling2d(inputs=c2, pool_size=2, strides=2, padding='same')
+        c1 = tf.layers.conv2d(inputs=input_layer, filters=32, kernel_size=8, strides=4, padding='same',
+                activation=tf.contrib.keras.layers.PReLU(alpha_initializer=tf.constant_initializer(prelu_alpha)))
+        c2 = tf.layers.conv2d(inputs=c1, filters=32, kernel_size=4, strides=2, padding='same',
+                activation=tf.contrib.keras.layers.PReLU(alpha_initializer=tf.constant_initializer(prelu_alpha)))
 
-        c3 = tf.layers.conv2d(inputs=p2, filters=64, kernel_size=4, padding='same', activation=tf.contrib.keras.layers.PReLU(alpha_initializer=tf.constant_initializer(0.0001)))
-        p3 = tf.layers.max_pooling2d(inputs=c3, pool_size=2, strides=2, padding='same')
+        flat = tf.reshape(c2, [-1, np.prod(c2.get_shape().as_list()[1:])])
 
-        c4 = tf.layers.conv2d(inputs=p3, filters=64, kernel_size=3, padding='same', activation=tf.contrib.keras.layers.PReLU(alpha_initializer=tf.constant_initializer(0.0001)))
-        #p4 = tf.layers.max_pooling2d(inputs=c4, pool_size=2, strides=2, padding='same')
-
-        flat = tf.reshape(c4, [-1, np.prod(c4.get_shape().as_list()[1:])])
-
-        #kinit = tf.contrib.keras.initializers.VarianceScaling(scale=1.0, mode="fan_avg", distribution="normal")
         kinit = tf.contrib.layers.xavier_initializer()
 
         self.dense = tf.layers.dense(inputs=flat, units=dense_layer_units,
-                activation=tf.contrib.keras.layers.PReLU(alpha_initializer=tf.constant_initializer(0.0001)),
+                activation=tf.contrib.keras.layers.PReLU(alpha_initializer=tf.constant_initializer(prelu_alpha)),
                 use_bias=True, name='dense_layer',
                 kernel_initializer=kinit,
                 bias_initializer=tf.random_normal_initializer(0, 0.1))

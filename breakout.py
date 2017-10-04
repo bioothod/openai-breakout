@@ -15,15 +15,15 @@ class breakout(object):
         c.put('game', 'Breakout-v0')
         c.put('gamma', 0.99)
         c.put('update_reward_steps', 5)
-        c.put('batch_size', 128)
-        c.put('input_shape', (80, 80, 1))
-        c.put('state_steps', 2)
+        c.put('input_shape', (84, 84, 1))
+        c.put('state_steps', 4)
         c.put('summary_flush_num', 100)
         c.put('env_num', args.env_num)
+        c.put('batch_size', c.get('update_reward_steps') * c.get('env_num'))
 
-        c.put('learning_rate_start', 5e-5)
-        c.put('learning_rate_end', 5e-6)
-        c.put('learning_rate_decay_steps', 900000)
+        c.put('learning_rate_start', 2.5e-4)
+        c.put('learning_rate_end', 2.5e-5)
+        c.put('learning_rate_decay_steps', 500000)
         c.put('learning_rate', args.learning_rate)
 
         c.put('follower_update_steps', 300)
@@ -41,11 +41,11 @@ class breakout(object):
 
         c.put('import_self_weight', 0.)
 
-        c.put('clip_gradient_norm', 1.0)
+        c.put('clip_gradient_norm', 0.1)
         c.put('xentropy_reg_beta', 0.01)
         c.put('policy_reg_beta', 0.)
 
-        c.put('dense_layer_units', 512)
+        c.put('dense_layer_units', 256)
 
         c.put('thread_num', args.thread_num)
 
@@ -57,8 +57,8 @@ class breakout(object):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--learning_rate', type=float, default=0, help='Set learning rate to this fixed value')
-    parser.add_argument('--thread_num', type=int, default=3, help='Number of runner threads')
-    parser.add_argument('--env_num', type=int, default=65, help='Number of environments in each runner thread')
+    parser.add_argument('--thread_num', type=int, default=4, help='Number of runner threads')
+    parser.add_argument('--env_num', type=int, default=64, help='Number of environments in each runner thread')
     parser.add_argument('--load', action='store', help='Load previously saved model')
     parser.add_argument('--device', action='store', default='/cpu:0', help='Use this device for processing')
     args=parser.parse_args()
