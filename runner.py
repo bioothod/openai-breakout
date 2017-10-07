@@ -97,10 +97,8 @@ class runner(object):
                 check_save(total_steps, episode_rewards)
 
                 episode_rewards = []
-                states = []
                 running_envs = self.envs
-                for e in running_envs:
-                    states.append(e.reset())
+                states = [e.reset() for e in running_envs]
 
 
             actions = self.get_actions(states)
