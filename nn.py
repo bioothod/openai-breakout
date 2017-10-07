@@ -209,7 +209,7 @@ class nn(object):
 
         self.init_model(config)
 
-        opt = tf.train.AdamOptimizer(self.learning_rate, name='optimizer')
+        opt = tf.train.RMSPropOptimizer(self.learning_rate, decay=0.99, use_locking=True, name='optimizer')
 
         self.train_clipped_step = self.setup_clipped_train(opt)
         self.setup_gradient_stats(opt)
