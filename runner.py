@@ -54,7 +54,6 @@ class runner(object):
     def run_sample(self, batch):
         states_shape = (len(batch), self.input_shape[0], self.input_shape[1], self.input_shape[2] * self.state_steps)
         states = np.zeros(shape=states_shape)
-        new_states = np.zeros(shape=states_shape)
 
         rashape = (len(batch), 1)
         reward = np.zeros(shape=rashape)
@@ -65,7 +64,6 @@ class runner(object):
             s, a, r, sn, done = e
 
             states[idx] = s.read()
-            new_states[idx] = sn.read()
             action[idx] = a
             reward[idx] = r
             idx += 1
