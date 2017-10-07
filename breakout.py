@@ -21,8 +21,8 @@ class breakout(object):
         c.put('env_num', args.env_num)
 
         c.put('learning_rate_start', 2.5e-4)
-        c.put('learning_rate_end', 2.5e-5)
-        c.put('learning_rate_decay_steps', 500000)
+        c.put('learning_rate_end', 2.5e-6)
+        c.put('learning_rate_decay_steps', 1000000)
         c.put('learning_rate', args.learning_rate)
 
         c.put('follower_update_steps', 300)
@@ -40,7 +40,7 @@ class breakout(object):
 
         c.put('import_self_weight', 0.)
 
-        c.put('clip_gradient_norm', 0.1)
+        c.put('clip_gradient_norm', 0.01)
         c.put('xentropy_reg_beta', 0.01)
         c.put('policy_reg_beta', 0.)
 
