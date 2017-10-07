@@ -1,12 +1,16 @@
 import tensorflow as tf
 import numpy as np
 
+import logging
 import threading
 import time
 
 import env
 import nn
 import runner
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 class sync(object):
     def __init__(self, config):
@@ -83,12 +87,12 @@ class sync(object):
     def save(self):
         if self.saver:
             self.saver.save(self.master.sess, self.save_path, global_step=self.master.global_step)
-            print("Network params have been saved to {0}".format(self.save_path))
+            logger.info("Network params have been saved to {0}".format(self.save_path))
 
     def restore(self, path):
         if self.saver:
             self.saver.restore(self.master.sess, path)
-            print("Network params have been loaded from {0}".format(path))
+            logger.info("Network params have been loaded from {0}".format(path))
 
     def check_save(self, total_steps, rid, episode_rewards):
         self.lock.acquire()

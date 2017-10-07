@@ -2,6 +2,11 @@ import tensorflow as tf
 
 import numpy as np
 
+import logging
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
 def get_param_name(s):
     return s.split('/', 1)[1].replace('/', 'X').split(':')[0]
 def get_scope_name(s):
@@ -23,7 +28,7 @@ class nn(object):
         self.summary_flush_num = config.get('summary_flush_num')
         self.device = config.get('device', '/cpu:0')
 
-        print("going to initialize scope %s" % scope)
+        logger.info("going to initialize scope %s" % scope)
         self.summary_writer = config.get('summary_writer')
         self.scope = scope
         with tf.variable_scope(scope) as vscope:
@@ -32,7 +37,7 @@ class nn(object):
                 self.do_init(config)
 
             self.session_init(config)
-            print("scope %s has been initialized" % scope)
+            logger.info("scope %s has been initialized" % scope)
 
     def session_init(self, config):
         gpu_config = tf.GPUOptions(
@@ -48,8 +53,6 @@ class nn(object):
         self.sess = config.get('session', tf.Session(config=tf_config))
 
     def init_model(self, config):
-        print("init_model scope: %s" % (tf.get_variable_scope().name))
-
         state_steps = config.get("state_steps")
         config_input_shape = config.get('input_shape')
         input_shape = (config_input_shape[0], config_input_shape[1], config_input_shape[2] * state_steps)

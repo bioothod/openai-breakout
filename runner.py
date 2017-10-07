@@ -2,8 +2,13 @@ import numpy as np
 
 from collections import deque
 
+import logging
+
 import gradient
 import nn
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 class runner(object):
     def __init__(self, rid, master, network, env_set, config):
@@ -97,7 +102,7 @@ class runner(object):
                 sn, reward, done = e.step(s, a)
 
                 if done:
-                    print("%s: %3d reward: %3d, total steps: %6d/%4d" % (
+                    logger.info("%s: %3d reward: %3d, total steps: %6d/%4d" % (
                             e.eid, e.episodes, e.creward, total_steps, e.total_steps_diff()))
 
                     self.update_reward(e, 0)
