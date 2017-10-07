@@ -18,7 +18,7 @@ class env_holder(object):
         self.state_steps = config.get("state_steps")
         self.current_state = state.state(self.input_shape, self.state_steps)
 
-        self.history = []
+        self.history_buffer = []
 
         self.creward = 0
 
@@ -48,7 +48,7 @@ class env_holder(object):
     def step(self, s, action):
         obs, reward, done, info = self.env.step(action)
         sn = self.new_state(obs)
-        self.history.append((s, action, reward, sn, done))
+        self.history_buffer.append((s, action, reward, sn, done))
         self.creward += reward
         self.total_steps += 1
 
@@ -68,10 +68,10 @@ class env_holder(object):
         return self.total_steps - self.prev_total_steps
 
     def clear(self):
-        self.history = []
+        self.history_buffer = []
 
     def history(self):
-        return self.history
+        return self.history_buffer
 
 class env_set(object):
     def __init__(self, rid, config):
