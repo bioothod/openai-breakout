@@ -94,7 +94,7 @@ class runner(object):
         total_steps = 0
         while not coord.should_stop():
             if len(running_envs) == 0:
-                check_save(self.envs[0].total_steps, episode_rewards)
+                check_save(total_steps, episode_rewards)
 
                 episode_rewards = []
                 states = []
@@ -137,11 +137,12 @@ class runner(object):
                     new_running_envs.append(e)
 
             total_steps += 1
-            if total_steps % self.update_reward_steps == 0 and len(new_states) > 0:
-                estimated_values = self.get_values(new_states)
-                for e, rev in zip(new_running_envs, estimated_values):
-                    self.update_reward(e, rev[0])
-                    e.clear()
+            if total_steps % self.update_reward_steps == 0:
+                if len(new_states) > 0:
+                    estimated_values = self.get_values(new_states)
+                    for e, rev in zip(new_running_envs, estimated_values):
+                        self.update_reward(e, rev[0])
+                        e.clear()
 
                 self.run_batch(self.batch)
                 self.batch = []
