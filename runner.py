@@ -30,7 +30,6 @@ class runner(object):
         self.ra_alpha = config.get("ra_alpha")
 
         self.batch = []
-        self.batch_size = config.get("batch_size")
  
         self.state_steps = config.get("state_steps")
         self.input_shape = config.get("input_shape")
@@ -42,20 +41,15 @@ class runner(object):
     def get_actions(self, states):
         input = [s.read() for s in states]
 
-        def random_choice(p):
-            ra_alpha = 0.1
-            random_choice = np.random.choice([True, False], p=[ra_alpha, 1.-ra_alpha])
-
-            if random_choice:
-                return np.random.randint(0, len(p))
-
-            return np.random.choice(len(p), p=p)
-
-        action_probs, values = self.network.predict(input)
-        #actions = [random_choice(p) for p in action_probs]
+        action_probs = self.network.predict_actions(input)
         actions = [np.random.choice(len(p), p=p) for p in action_probs]
 
-        return actions, values
+        return actions
+    
+    def get_values(self, states):
+        input = [s.read() for s in states]
+
+        return self.network.predict_values(input)
 
     def run_sample(self, batch):
         states_shape = (len(batch), self.input_shape[0], self.input_shape[1], self.input_shape[2] * self.state_steps)
@@ -85,49 +79,37 @@ class runner(object):
 
         self.run_sample(h)
 
-    def update_reward(self, e, done):
-        local_batch = e.last(self.batch_size)
-
-        rev = 0.0
-        if not done:
-            s, a, r, sn, done = local_batch[-1]
-
-            _, rev = self.get_actions([sn])
-
+    def update_reward(self, e, rev):
         h = []
-        for elm in reversed(local_batch):
+        for elm in reversed(e.history()):
             s, a, r, sn, done = elm
             rev = r + self.gamma * rev
 
             h.append((s, a, rev, sn, done))
 
         self.batch += h
-        if len(self.batch) >= self.batch_size:
-            self.run_batch(self.batch)
-            self.batch = []
 
     def run(self, coord, check_save):
         states = []
         running_envs = []
         episode_rewards = []
+        total_steps = 0
         while not coord.should_stop():
             if len(running_envs) == 0:
                 check_save(self.envs[0].total_steps, episode_rewards)
 
-                running_envs = self.envs
-                states = [e.reset() for e in running_envs]
                 episode_rewards = []
+                states = []
+                running_envs = self.envs
+                for e in running_envs:
+                    states.append(e.reset())
 
-            actions, values = self.get_actions(states)
+
+            actions = self.get_actions(states)
             new_states = []
             new_running_envs = []
-            for e, s, a, v in zip(running_envs, states, actions, values):
+            for e, s, a in zip(running_envs, states, actions):
                 sn, reward, done = e.step(s, a)
-
-                if e.total_steps % self.update_reward_steps == 0 or done:
-                    self.update_reward(e, done)
-
-                    e.clear()
 
                 if done:
                     if len(self.last_rewards) >= self.last_rewards_size:
@@ -148,11 +130,23 @@ class runner(object):
                             e.creward, max_last, self.max_reward, e.total_steps, e.total_steps_diff(),
                             len(self.last_rewards), mean,
                             np.mean(episode_rewards), np.min(episode_rewards), np.max(episode_rewards)))
+                    self.update_reward(e, 0)
 
+                    e.clear()
                     e.clear_stats()
                 else:
                     new_states.append(sn)
                     new_running_envs.append(e)
+
+            total_steps += 1
+            if total_steps % self.update_reward_steps == 0 and len(new_states) > 0:
+                estimated_values = self.get_values(new_states)
+                for e, rev in zip(new_running_envs, estimated_values):
+                    self.update_reward(e, rev[0])
+                    e.clear()
+
+                self.run_batch(self.batch)
+                self.batch = []
 
             states = new_states
             running_envs = new_running_envs

@@ -233,6 +233,18 @@ class nn(object):
                 self.scope + '/x:0': states,
             })
         return p, v
+    
+    def predict_actions(self, states):
+        p = self.sess.run([self.policy], feed_dict={
+                self.scope + '/x:0': states,
+            })
+        return p[0]
+    
+    def predict_values(self, states):
+        v = self.sess.run([self.value], feed_dict={
+                self.scope + '/x:0': states,
+            })
+        return v[0]
 
     def train(self, states, action, reward):
         self.train_num += 1

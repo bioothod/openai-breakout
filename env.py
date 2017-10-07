@@ -70,8 +70,8 @@ class env_holder(object):
     def clear(self):
         self.history = []
 
-    def last(self, batch_size):
-        return self.history[-batch_size:]
+    def history(self):
+        return self.history
 
 class env_set(object):
     def __init__(self, rid, config):

@@ -19,7 +19,6 @@ class breakout(object):
         c.put('state_steps', 4)
         c.put('summary_flush_num', 100)
         c.put('env_num', args.env_num)
-        c.put('batch_size', c.get('update_reward_steps') * c.get('env_num'))
 
         c.put('learning_rate_start', 2.5e-4)
         c.put('learning_rate_end', 2.5e-5)
