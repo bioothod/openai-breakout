@@ -6,8 +6,9 @@ import gradient
 import nn
 
 class runner(object):
-    def __init__(self, master, network, env_set, config):
+    def __init__(self, rid, master, network, env_set, config):
         self.config = config
+        self.rid = rid
 
         self.grads = {}
 
@@ -17,11 +18,6 @@ class runner(object):
 
         self.total_steps = 0
         self.total_actions = 0
-
-        self.last_rewards = deque()
-        self.last_rewards_size = 100
-
-        self.max_reward = 0
 
         self.import_self_weight = config.get('import_self_weight')
 
@@ -88,48 +84,28 @@ class runner(object):
         self.batch += h
 
     def run(self, coord, check_save):
-        states = []
-        running_envs = []
-        episode_rewards = []
+        running_envs = self.envs
+        states = [e.reset() for e in running_envs]
+
         total_steps = 0
         while not coord.should_stop():
-            if len(running_envs) == 0:
-                check_save(total_steps, episode_rewards)
-
-                episode_rewards = []
-                running_envs = self.envs
-                states = [e.reset() for e in running_envs]
-
-
             actions = self.get_actions(states)
             new_states = []
             new_running_envs = []
+            done_envs = []
             for e, s, a in zip(running_envs, states, actions):
                 sn, reward, done = e.step(s, a)
 
                 if done:
-                    if len(self.last_rewards) >= self.last_rewards_size:
-                        self.last_rewards.popleft()
+                    print("%s: %3d reward: %3d, total steps: %6d/%4d" % (
+                            e.eid, e.episodes, e.creward, total_steps, e.total_steps_diff()))
 
-                    self.last_rewards.append(e.creward)
-
-                    mean = np.mean(self.last_rewards)
-                    max_last = np.max(self.last_rewards)
-
-                    if e.creward > self.max_reward:
-                        self.max_reward = e.creward
-
-                    episode_rewards.append(e.creward)
-
-                    print("%s: %3d %2d/%d reward: %3d/%3d/%3d, total steps: %6d/%4d, mean reward over last %3d episodes: %.1f, per episode: %.1f, min/max: %d/%d" % (
-                            e.eid, e.episodes, len(running_envs), len(self.envs),
-                            e.creward, max_last, self.max_reward, e.total_steps, e.total_steps_diff(),
-                            len(self.last_rewards), mean,
-                            np.mean(episode_rewards), np.min(episode_rewards), np.max(episode_rewards)))
                     self.update_reward(e, 0)
 
                     e.clear()
                     e.clear_stats()
+
+                    done_envs.append(e)
                 else:
                     new_states.append(sn)
                     new_running_envs.append(e)
@@ -145,8 +121,10 @@ class runner(object):
                 self.run_batch(self.batch)
                 self.batch = []
 
-            states = new_states
-            running_envs = new_running_envs
+                check_save(total_steps, self.rid, [e.last_creward for e in self.envs])
+
+            states = new_states + [e.reset() for e in done_envs]
+            running_envs = new_running_envs + done_envs
 
         coord.request_stop()
 

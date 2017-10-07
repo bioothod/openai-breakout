@@ -16,7 +16,7 @@ class sync(object):
         self.thread_num = config.get('thread_num')
         self.env_num = config.get('env_num')
         self.lock = threading.Lock()
-        self.episode_rewards = []
+        self.episode_rewards = [[] for i in range(self.thread_num)]
 
         output_path = config.get("output_path")
         if output_path:
@@ -45,7 +45,7 @@ class sync(object):
         for r in range(self.thread_num):
             n = nn.nn('r{0}'.format(r), config)
             e = env.env_set(r, config)
-            self.runners.append(runner.runner(self.master, n, e, config))
+            self.runners.append(runner.runner(r, self.master, n, e, config))
 
         init = [tf.global_variables_initializer(), tf.local_variables_initializer()]
         self.master.sess.run(init)
@@ -90,14 +90,13 @@ class sync(object):
             self.saver.restore(self.master.sess, path)
             print("Network params have been loaded from {0}".format(path))
 
-    def check_save(self, total_steps, episode_rewards):
+    def check_save(self, total_steps, rid, episode_rewards):
         self.lock.acquire()
         try:
-            self.episode_rewards += episode_rewards
+            self.episode_rewards[rid] = episode_rewards
 
-            if len(self.episode_rewards) == self.thread_num * self.env_num:
-                self.master.update_rewards(self.episode_rewards)
-                self.episode_rewards = []
+            rewards = [r for runner_rewards in self.episode_rewards for r in runner_rewards]
+            self.master.update_rewards(rewards)
 
             if not self.save_path:
                 return

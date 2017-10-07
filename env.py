@@ -21,6 +21,7 @@ class env_holder(object):
         self.history_buffer = []
 
         self.creward = 0
+        self.last_creward = 0
 
         self.episodes = 0
         self.total_steps = 0
@@ -60,6 +61,7 @@ class env_holder(object):
         return sn, reward, done
 
     def clear_stats(self):
+        self.last_creward = self.creward
         self.creward = 0
         self.last_value = 0.0
         self.prev_total_steps = self.total_steps
