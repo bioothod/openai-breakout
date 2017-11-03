@@ -10,6 +10,10 @@ import state
 class env_holder(object):
     def __init__(self, eid, config):
         self.env = gym.make(config.get("game"))
+        monitor_dir = config.get('monitor_dir')
+        if monitor_dir:
+            self.env = gym.wrappers.Monitor(self.env, directory=monitor_dir, video_callable=False, write_upon_reset=True)
+
         self.osize = self.env.action_space.n
         self.eid = eid
 

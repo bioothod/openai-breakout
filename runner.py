@@ -26,9 +26,7 @@ class runner(object):
 
         self.import_self_weight = config.get('import_self_weight')
 
-        self.ra_range_begin = config.get("ra_range_begin")
-        self.ra_alpha_cap = config.get("ra_alpha_cap")
-        self.ra_alpha = config.get("ra_alpha")
+        self.will_train = config.get("will_train")
 
         self.batch = []
  
@@ -43,7 +41,10 @@ class runner(object):
         input = [s.read() for s in states]
 
         action_probs = self.network.predict_actions(input)
-        actions = [np.random.choice(len(p), p=p) for p in action_probs]
+        if self.will_train:
+            actions = [np.random.choice(len(p), p=p) for p in action_probs]
+        else:
+            actions = np.argmax(action_probs, axis=1)
 
         return actions
     
@@ -79,6 +80,9 @@ class runner(object):
         self.run_sample(h)
 
     def update_reward(self, e, rev):
+        if not self.will_train:
+            return
+
         h = []
         for elm in reversed(e.history()):
             s, a, r, sn, done = elm
@@ -116,7 +120,7 @@ class runner(object):
                     new_running_envs.append(e)
 
             total_steps += 1
-            if total_steps % self.update_reward_steps == 0:
+            if total_steps % self.update_reward_steps == 0 and self.will_train:
                 if len(new_states) > 0:
                     estimated_values = self.get_values(new_states)
                     for e, rev in zip(new_running_envs, estimated_values):

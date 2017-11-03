@@ -12,6 +12,8 @@ class breakout(object):
         c.put('device', args.device)
         c.put('per_process_gpu_memory_fraction', 1.)
 
+        c.put('thread_num', args.thread_num)
+
         c.put('game', 'Breakout-v0')
         c.put('gamma', 0.99)
         c.put('update_reward_steps', 5)
@@ -30,10 +32,21 @@ class breakout(object):
         name = '%s.%d' % (c.get("game"), time.time())
         c.put('output_path', 'output/' + name)
 
-        c.put('save_path', 'save/' + name)
-        c.put('save_per_total_steps', 100000)
-        c.put('save_per_minutes', 60)
-        c.put('save_max_to_keep', 5)
+        c.put('will_train', True)
+
+        if args.play not None:
+            c.put('env_num', 1)
+            c.put('thread_num', 1)
+            c.put('will_train', False)
+            c.put('monitor_dir', args.play)
+
+            print("Setting number of threads and environments to 1 and disable game saving, since this is a monitored play")
+        else:
+            c.put('save_path', 'save/' + name)
+            c.put('save_per_total_steps', 100000)
+            c.put('save_per_minutes', 60)
+            c.put('save_max_to_keep', 5)
+
         if args.load:
             c.put('load_path', args.load)
         c.put('global_step_reset', True)
@@ -45,8 +58,6 @@ class breakout(object):
         c.put('policy_reg_beta', 0.)
 
         c.put('dense_layer_units', 256)
-
-        c.put('thread_num', args.thread_num)
 
         self.ac = sync.sync(c)
 
@@ -60,6 +71,7 @@ if __name__ == '__main__':
     parser.add_argument('--env_num', type=int, default=64, help='Number of environments in each runner thread')
     parser.add_argument('--load', action='store', help='Load previously saved model')
     parser.add_argument('--device', action='store', default='/cpu:0', help='Use this device for processing')
+    parser.add_argument('--play', action='store', default='monitor', help='Directory to store monitor data')
     args=parser.parse_args()
 
     if 'gpu' in args.device:
