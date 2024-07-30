@@ -15,7 +15,7 @@ pyglet==1.2.4
 PyOpenGL==3.1.0
 requests==2.32.0
 six==1.10.0
-tensorflow==2.11.1
+tensorflow==2.12.1
 tensorflow-tensorboard==0.1.4
 urllib3==1.26.19
 Werkzeug==2.3.8
